@@ -1,0 +1,3019 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FosterMatch — AI matching for foster homes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='%2317A192' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 15.5 L16 4.5 L28.5 15.5'/%3E%3Cpath d='M7 17 V28'/%3E%3Cpath d='M25 17 V28'/%3E%3C/g%3E%3Cg fill='%231B3B6F'%3E%3Cellipse cx='16' cy='22.5' rx='4.2' ry='3.4'/%3E%3Ccircle cx='11.6' cy='17.6' r='1.8'/%3E%3Ccircle cx='14.9' cy='15.6' r='1.9'/%3E%3Ccircle cx='18.4' cy='15.6' r='1.9'/%3E%3Ccircle cx='21' cy='17.8' r='1.7'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  /* ---- Windowlight: warm sunlit interior ---- */
+  --sun:#FDF5EC;
+  --sun-2:#F7E9D9;
+  --sun-3:#F0DCC6;
+  --shell:#FFFCF8;
+  --ink:#231810;
+  --ink-2:#4A3A2E;
+  --ink-3:#7C6857;
+  --hair:#E6D6C2;
+  --hair-2:#D8C3A9;
+
+  /* ---- Enamel tag colors: the palette of a pet ID tag ---- */
+  --teal:#0F7A6B;
+  --teal-2:#0B5C50;
+  --teal-lift:#E4F1EC;
+  --marigold:#E0912B;
+  --marigold-lift:#FBEBD2;
+  --cherry:#CE3A2B;
+  --cherry-lift:#FBE4E0;
+
+  /* ---- Spruce: reserved for the machine's own voice ---- */
+  --spruce:#12332C;
+  --spruce-2:#1B4A40;
+  --spruce-3:#2A6355;
+  --spruce-ink:#CFE6DE;
+  --spruce-mute:#7FA79B;
+
+  --display:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",serif;
+  --sans:system-ui,-apple-system,"Segoe UI Variable Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;
+
+  --arch:120px 120px 14px 14px;
+  --lift-1:0 1px 2px rgba(60,38,20,.06),0 3px 8px -3px rgba(60,38,20,.10);
+  --lift-2:0 2px 4px rgba(60,38,20,.07),0 12px 26px -12px rgba(60,38,20,.28);
+  --lift-3:0 4px 8px rgba(60,38,20,.08),0 28px 50px -20px rgba(60,38,20,.40);
+
+  color-scheme:light;
+}
+/* One committed look — hold it against theme toggles in both directions. */
+@media (prefers-color-scheme:dark){ :root{ color-scheme:light; } }
+:root[data-theme="light"],:root[data-theme="dark"]{ color-scheme:light; }
+
+*{box-sizing:border-box}
+/* Class rules like `.filters{display:flex}` outrank the UA `[hidden]` rule,
+   which silently un-hides anything toggled by the hidden attribute. */
+[hidden]{display:none!important}
+html,body{margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--sun);
+  color:var(--ink-2);
+  font-family:var(--sans);
+  font-size:15.5px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+/* Ambient light: the sun coming through a window, behind everything. */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(900px 620px at 78% -8%,rgba(224,145,43,.16),transparent 62%),
+    radial-gradient(760px 560px at 6% 4%,rgba(15,122,107,.09),transparent 60%),
+    radial-gradient(1100px 700px at 50% 108%,rgba(206,58,43,.05),transparent 60%);
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2.5px solid var(--teal);outline-offset:2px;border-radius:3px}
+
+h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spacing:-.015em}
+.k-name,.sel-name,.pet-name,.sheet-name,.drawer-h,.empty b{text-wrap:balance}
+.score b,.stat b,.k-id,.factor em,.meter,.pet-score b{font-variant-numeric:tabular-nums}
+
+.lbl{
+  font-family:var(--mono);font-size:10px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--ink-3);
+}
+.serif{font-family:var(--display)}
+
+/* ============ shell / nav ============ */
+.ops{
+  position:sticky;top:0;z-index:40;
+  background:rgba(253,245,236,.86);
+  backdrop-filter:blur(14px) saturate(1.3);
+  border-bottom:1px solid var(--hair);
+}
+.ops-row{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:13px 26px}
+/* ---- brand ----
+   Logo colours are the logo's own, not the site palette: a mark should keep
+   its identity wherever it is placed. */
+:root{
+  --logo-teal:#17A192;
+  --logo-blue:#4A72B8;
+  --logo-navy:#1B3B6F;
+  --logo-sun:#F5B93B;
+}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+/* Cropped from the supplied logo.png: the emblem only, since the badge's own
+   wordmark would print the name twice next to the type below. */
+.brand-logo{height:42px;width:auto;display:block;flex:none}
+.brand .brand-sub{margin-left:4px}
+.brand-word{
+  font-family:var(--sans);font-weight:800;font-size:23px;letter-spacing:-.03em;
+  color:var(--logo-navy);display:inline-flex;align-items:center;line-height:1;
+  /* the footer uppercases its text; the wordmark keeps its own casing */
+  text-transform:none;
+}
+/* the paw sits in the counter of the "o" */
+.brand-o{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:.84em;height:.84em;border-radius:50%;
+  border:.12em solid var(--logo-teal);
+  margin:0 .05em;flex:none;
+}
+.brand-o svg{width:.46em;height:.46em;display:block;fill:var(--logo-navy)}
+.brand-sub{
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;
+  color:var(--ink-3);text-transform:uppercase;font-style:normal;align-self:center;
+}
+@media (max-width:620px){ .brand-sub{display:none} .brand-logo{height:34px} .brand-word{font-size:20px} }
+
+/* full lockup with the tagline, used in the footer */
+.lockup{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:18px}
+.lockup-row{display:flex;align-items:center;gap:13px}
+.lockup .brand-logo{height:58px}
+.lockup-tag{
+  font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--logo-teal);
+}
+.stats{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto}
+.stat{
+  display:flex;align-items:center;gap:8px;padding:6px 13px;
+  border:1px solid var(--hair-2);background:var(--shell);border-radius:99px;
+  box-shadow:var(--lift-1);
+}
+.stat b{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--ink)}
+.stat.is-alarm{border-color:rgba(206,58,43,.4);background:var(--cherry-lift);cursor:pointer}
+.stat.is-alarm b{color:var(--cherry)}
+.stat.is-alarm:hover{background:#F7D6D0}
+.stat.is-btn{cursor:pointer}
+.stat.is-btn:hover{background:var(--sun-2)}
+
+.tabs{display:flex;gap:3px;background:var(--sun-2);border:1px solid var(--hair);border-radius:99px;padding:3px}
+.tab{
+  font-size:13px;font-weight:600;padding:7px 16px;border-radius:99px;color:var(--ink-3);
+  transition:background .16s ease,color .16s ease,box-shadow .16s ease;
+}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--shell);color:var(--ink);box-shadow:var(--lift-1)}
+
+.filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0 26px 12px}
+.chip{
+  font-size:12px;font-weight:600;padding:5px 13px;
+  border:1px solid var(--hair-2);border-radius:99px;color:var(--ink-3);background:var(--shell);
+  transition:all .15s ease;
+}
+.chip:hover{border-color:var(--ink-3);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--sun);border-color:var(--ink)}
+
+/* ============ SIGNATURE: the arch diorama ============
+   Three z-planes inside one perspective box — light wash, the animal,
+   and the arch frame itself — so a portrait has real depth and parallaxes
+   against the pointer. This is the promise of the product, drawn: an
+   animal lifted out of a flat kennel card and into a lit room. */
+.dio{
+  display:block;position:relative;flex:none;
+  perspective:620px;
+  perspective-origin:50% 40%;
+  overflow:visible;
+}
+/* Clipping deliberately lives on the child layers, not here: `overflow:hidden`
+   on a preserve-3d element collapses it to flat and the z-separation is lost. */
+.dio-inner{
+  display:block;position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transition:transform .5s cubic-bezier(.2,.7,.2,1);
+  border-radius:var(--arch);
+}
+.dio-wash{
+  display:block;position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(168deg,#F4E3CD,#E9D2B2 56%,#DCBE99);
+  transform:translateZ(0);
+  overflow:hidden;
+}
+/* light falling through the arch */
+.dio-wash::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(120% 80% at 26% 8%,rgba(255,255,255,.85),transparent 58%);
+}
+/* The padding keeps the animal clear of the arch curve at the top. */
+.dio-art{
+  display:block;position:absolute;inset:0;border-radius:inherit;overflow:hidden;
+  padding:11% 9% 0;
+  transform:translateZ(26px);
+}
+.dio-art svg{display:block;width:100%;height:100%;filter:drop-shadow(0 6px 10px rgba(60,38,20,.22))}
+/* The photograph sits over the drawn fallback and fills the whole arch —
+   absolute inset ignores the padding the illustration needs. Biased above
+   centre because that is where an animal's face nearly always sits. */
+.dio-photo{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:50% 32%;
+  border-radius:inherit;background:var(--sun-3);
+}
+.dio-photo[hidden]{display:none!important}
+.dio-frame{
+  display:block;position:absolute;inset:0;border-radius:inherit;
+  border:1.5px solid rgba(120,88,58,.30);
+  box-shadow:inset 0 0 0 5px rgba(255,252,248,.72),inset 0 -18px 34px -18px rgba(90,60,34,.5);
+  transform:translateZ(44px);
+  pointer-events:none;
+}
+.dio.is-tilt .dio-inner{box-shadow:var(--lift-2)}
+
+/* Small inline variant. A full dome at this size crops ears, so the arch is
+   shallower and the figure sits lower in the frame. */
+.dio.dio-sm .dio-frame{box-shadow:inset 0 0 0 3px rgba(255,252,248,.7)}
+.dio.dio-sm{--arch:24px 24px 6px 6px}
+.dio.dio-sm .dio-art{padding:15% 7% 0}
+
+/* ============ hero ============ */
+.hero{position:relative;padding:0 26px;overflow:hidden}
+.hero-in{max-width:1180px;margin:0 auto;padding:58px 0 46px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+/* ---- AI disclosure ----
+   The matching is done by software, and a person should be able to tell that
+   at a glance from any screen, so the badge is a shared component rather than
+   one easily-missed line in the hero. */
+.ai-badge{
+  display:inline-flex;align-items:center;gap:7px;flex:none;
+  font-size:12.5px;font-weight:700;letter-spacing:.01em;
+  padding:5px 13px 5px 9px;border-radius:99px;
+  background:var(--teal-lift);border:1px solid rgba(15,122,107,.38);color:var(--teal-2);
+}
+.ai-badge svg{width:15px;height:15px;display:block;flex:none}
+.ai-badge .beat{
+  width:6px;height:6px;border-radius:99px;background:var(--teal);flex:none;
+  animation:beat 2.6s ease-out infinite;
+}
+/* on the dark AI panels */
+.ai-badge.on-dark{background:rgba(53,183,158,.15);border-color:rgba(53,183,158,.45);color:#8FE0C9}
+.ai-badge.on-dark .beat{background:#35B79E}
+
+.eyebrow{
+  font-size:15px;font-weight:700;letter-spacing:.01em;
+  color:var(--teal-2);display:inline-flex;align-items:center;gap:10px;margin-bottom:22px;
+  background:var(--teal-lift);border:1px solid rgba(15,122,107,.38);
+  padding:8px 17px 8px 12px;border-radius:99px;
+  box-shadow:0 6px 16px -10px rgba(15,122,107,.6);
+}
+.eyebrow svg{width:17px;height:17px;display:block;flex:none}
+.eyebrow em{
+  font-style:normal;font-weight:500;font-size:13.5px;color:var(--ink-3);
+  padding-left:10px;margin-left:2px;border-left:1px solid rgba(15,122,107,.3);
+}
+@media (max-width:560px){ .eyebrow em{display:none} }
+@keyframes beat{
+  0%{box-shadow:0 0 0 0 rgba(15,122,107,.55)}
+  70%{box-shadow:0 0 0 9px rgba(15,122,107,0)}
+  100%{box-shadow:0 0 0 0 rgba(15,122,107,0)}
+}
+.hero h1{
+  font-size:clamp(38px,5.6vw,62px);line-height:1.02;letter-spacing:-.03em;margin:0;
+  text-wrap:balance;
+}
+.hero h1 em{font-style:italic;color:var(--teal)}
+.hero-p{font-size:17.5px;line-height:1.6;color:var(--ink-2);margin:20px 0 0;max-width:46ch}
+.hero-acts{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px;align-items:center}
+.hero-tally{
+  display:flex;gap:26px;flex-wrap:wrap;margin-top:38px;
+  padding-top:24px;border-top:1px solid var(--hair);
+}
+.tally b{
+  display:block;font-family:var(--display);font-size:32px;color:var(--ink);
+  line-height:1;letter-spacing:-.02em;
+}
+.tally b.is-urgent{color:var(--cherry)}
+.tally span{display:block;margin-top:6px}
+
+/* the hero diorama cluster — depth by staggered z and scale */
+/* Depth comes from z-position and parallax, not from stacking — overlapping
+   the arches buried the name tags, which are the point of showing them. */
+.cluster{position:relative;min-height:500px;perspective:1100px;perspective-origin:50% 45%}
+.cluster-in{position:relative;width:100%;height:500px;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.cluster .dio{position:absolute;box-shadow:var(--lift-3);border-radius:var(--arch);width:172px;height:216px}
+.cl-a{left:2%;top:0;transform:translateZ(40px) rotate(-2.5deg)}
+.cl-c{right:2%;top:28px;transform:translateZ(0) rotate(2deg)}
+.cl-d{left:2%;top:244px;transform:translateZ(74px) rotate(1.5deg)}
+.cl-b{right:2%;top:272px;transform:translateZ(112px) rotate(-1.5deg);z-index:3}
+.cluster .dio{animation:float 9s ease-in-out infinite}
+.cl-b{animation-delay:-2.2s}
+.cl-c{animation-delay:-4.4s}
+.cl-d{animation-delay:-6.1s}
+@keyframes float{0%,100%{margin-top:0}50%{margin-top:-11px}}
+/* Leave room for the placard so it never covers the collar tag. */
+.cluster .dio-art{padding-bottom:38px}
+.cl-tag{
+  display:flex;position:absolute;bottom:9px;left:9px;right:9px;z-index:5;
+  transform:translateZ(52px);
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  background:rgba(255,252,248,.93);border-radius:8px;padding:6px 10px;
+  box-shadow:var(--lift-1);
+}
+.cl-tag b{font-family:var(--display);font-size:14.5px;color:var(--ink);letter-spacing:-.01em}
+.cl-tag span{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ============ buttons ============ */
+.btn{
+  font-size:13.5px;font-weight:600;padding:11px 20px;
+  border:1px solid var(--hair-2);border-radius:99px;color:var(--ink);background:var(--shell);
+  transition:transform .14s ease,box-shadow .14s ease,background .14s ease,border-color .14s ease;
+  box-shadow:var(--lift-1);display:inline-flex;align-items:center;gap:8px;
+}
+.btn:hover{transform:translateY(-1.5px);box-shadow:var(--lift-2);border-color:var(--ink-3)}
+.btn:active{transform:translateY(0)}
+.btn.is-primary{
+  background:linear-gradient(178deg,var(--teal-2),#0A4E44);
+  border-color:var(--teal-2);color:#F2FBF8;font-weight:650;
+  box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 10px 22px -10px rgba(11,92,80,.75);
+}
+.btn.is-primary:hover{background:linear-gradient(178deg,#12897A,var(--teal-2));box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 16px 30px -12px rgba(11,92,80,.85)}
+.btn.is-ghost{background:transparent;box-shadow:none;border-color:var(--hair-2)}
+.btn.is-ghost:hover{background:var(--shell);box-shadow:var(--lift-1)}
+.btn.is-sm{font-size:12.5px;padding:8px 15px}
+.btn[disabled]{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none}
+.btn[disabled]:hover{transform:none;box-shadow:none;border-color:var(--hair-2)}
+
+/* ============ AI surfaces: the machine speaks in spruce ============ */
+.ai-panel{
+  background:
+    radial-gradient(700px 300px at 12% 0%,rgba(42,99,85,.55),transparent 62%),
+    linear-gradient(172deg,var(--spruce),#0C241F);
+  color:var(--spruce-ink);border-radius:20px;
+  box-shadow:var(--lift-3);
+  position:relative;overflow:hidden;
+}
+.ai-panel .lbl{color:var(--spruce-mute)}
+.ai-head{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:18px 22px;border-bottom:1px solid rgba(207,230,222,.14);
+}
+.ai-mark{
+  width:30px;height:30px;border-radius:9px;flex:none;
+  background:linear-gradient(150deg,#2FA68F,var(--teal-2));
+  display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(207,230,222,.2),0 6px 14px -6px rgba(0,0,0,.6);
+}
+.ai-mark svg{width:17px;height:17px;display:block}
+.ai-title{font-family:var(--display);font-size:17px;color:#F0FAF7;letter-spacing:-.01em}
+.ai-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--spruce-mute)}
+.ai-body{padding:20px 22px 22px}
+
+/* conversational intake */
+.talk{max-width:1180px;margin:0 auto}
+.talk-wrap{padding:0 26px 8px}
+.talk-area{
+  width:100%;background:rgba(6,20,17,.5);border:1px solid rgba(207,230,222,.2);
+  border-radius:14px;color:#EAF6F2;padding:16px 17px;font-family:inherit;
+  font-size:16px;line-height:1.6;resize:vertical;min-height:132px;
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+.talk-area::placeholder{color:#6F978B}
+.talk-area:focus{outline:none;border-color:var(--spruce-3);box-shadow:0 0 0 4px rgba(47,166,143,.16)}
+.talk-acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.btn.on-dark{background:rgba(207,230,222,.1);border-color:rgba(207,230,222,.25);color:var(--spruce-ink);box-shadow:none}
+.btn.on-dark:hover{background:rgba(207,230,222,.18);border-color:rgba(207,230,222,.45);color:#F2FBF8}
+.btn.is-bright{
+  background:linear-gradient(178deg,#35B79E,#149079);border-color:#149079;color:#04231D;font-weight:700;
+  box-shadow:0 10px 24px -10px rgba(53,183,158,.8);
+}
+.btn.is-bright:hover{background:linear-gradient(178deg,#48C9AF,#17A187)}
+.talk-hint{font-size:13px;color:var(--spruce-mute);margin:12px 0 0;line-height:1.55}
+
+/* live reasoning stream */
+.stream{
+  font-family:var(--mono);font-size:12px;line-height:1.5;
+  display:flex;flex-direction:column;gap:0;
+  border-top:1px solid rgba(207,230,222,.14);margin-top:18px;padding-top:14px;
+  max-height:280px;overflow-y:auto;
+}
+.stream[hidden]{display:none}
+.st-line{
+  display:grid;grid-template-columns:16px 1fr auto;gap:10px;align-items:baseline;
+  padding:5px 2px;color:var(--spruce-mute);
+  animation:stepIn .32s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes stepIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.st-line i{font-style:normal;color:var(--spruce-3)}
+.st-line em{font-style:normal;font-size:10.5px;letter-spacing:.06em}
+.st-line.is-hit{color:#8FE0C9}
+.st-line.is-hit i{color:#35B79E}
+.st-line.is-cut{color:#F2A79C}
+.st-line.is-cut i{color:var(--cherry)}
+.st-line.is-head{color:#EAF6F2;font-size:11px;letter-spacing:.13em;text-transform:uppercase;padding-top:12px}
+.st-caret{display:inline-block;width:7px;height:13px;background:#35B79E;vertical-align:-2px;animation:blink .9s steps(2) infinite}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+
+/* extracted-signal chips */
+.ai-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.ai-chip{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:600;
+  padding:6px 12px 6px 11px;border-radius:99px;
+  border:1px solid rgba(53,183,158,.42);color:#A8E7D3;background:rgba(53,183,158,.12);
+  animation:chipIn .34s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes chipIn{from{opacity:0;transform:translateY(6px) scale(.94)}to{opacity:1;transform:none}}
+.ai-chip.is-neg{border-color:rgba(224,145,43,.45);color:#F5CE95;background:rgba(224,145,43,.13)}
+.ai-conf{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;
+  opacity:.75;padding-left:8px;border-left:1px solid currentColor;
+}
+.ai-none{font-size:13.5px;color:var(--spruce-mute);margin:12px 0 0}
+
+/* clarifying questions */
+.asks{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+.ask{
+  background:rgba(224,145,43,.1);border:1px solid rgba(224,145,43,.3);
+  border-radius:12px;padding:12px 14px;
+  animation:chipIn .34s cubic-bezier(.2,.7,.2,1) both;
+}
+.ask-q{font-size:13.5px;color:#F7DFB9;line-height:1.5}
+.ask-opts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.ask-opt{
+  font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:99px;
+  border:1px solid rgba(224,145,43,.42);color:#F5CE95;background:rgba(224,145,43,.08);
+  transition:all .14s ease;
+}
+.ask-opt:hover{background:var(--marigold);color:#2A1A05;border-color:var(--marigold)}
+.ask-opt[aria-pressed="true"]{background:var(--marigold);color:#2A1A05;border-color:var(--marigold)}
+
+/* ============ intake form ============ */
+.intake{max-width:1180px;margin:0 auto;padding:26px 26px 90px}
+.sec-head{max-width:62ch;margin:0 0 26px}
+.sec-h{font-size:clamp(25px,3.2vw,34px);line-height:1.1;margin:0}
+.sec-p{color:var(--ink-2);font-size:16px;line-height:1.6;margin:12px 0 0;max-width:58ch}
+.rule{display:flex;align-items:center;gap:14px;margin:52px 0 26px}
+.rule::after{content:"";flex:1;height:1px;background:var(--hair-2)}
+
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:18px;align-items:start}
+.fieldset{
+  border:1px solid var(--hair);background:var(--shell);border-radius:16px;padding:18px 19px;
+  box-shadow:var(--lift-1);transition:box-shadow .2s ease,transform .2s ease;
+}
+.fieldset > .lbl{display:block;margin-bottom:15px}
+/* a field the AI just filled in gets a moment of attention */
+.fieldset.is-lit{box-shadow:0 0 0 2px var(--teal),var(--lift-2);transform:translateY(-2px)}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field > span{font-size:13.5px;color:var(--ink-2);font-weight:500}
+.input,.select,.area{
+  background:var(--sun);border:1px solid var(--hair-2);border-radius:10px;
+  color:var(--ink);padding:10px 12px;font-family:inherit;font-size:14.5px;width:100%;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+}
+.select{cursor:pointer}
+.area{line-height:1.55;resize:vertical;min-height:112px}
+.input:focus,.select:focus,.area:focus{border-color:var(--teal);background:var(--shell);outline:none;box-shadow:0 0 0 3.5px rgba(15,122,107,.14)}
+.input.is-lit,.select.is-lit{animation:litField .9s ease}
+@keyframes litField{0%{background:var(--teal-lift);border-color:var(--teal)}100%{background:var(--sun);border-color:var(--hair-2)}}
+.checks{display:flex;flex-wrap:wrap;gap:7px}
+.check{position:relative}
+.check input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.check span{
+  display:block;font-size:12.5px;font-weight:600;
+  padding:7px 14px;border:1px solid var(--hair-2);border-radius:99px;color:var(--ink-3);
+  background:var(--sun);transition:all .15s ease;
+}
+.check:hover span{border-color:var(--ink-3);color:var(--ink)}
+.check input:checked + span{background:var(--ink);color:var(--sun);border-color:var(--ink)}
+.check input:focus-visible + span{outline:2.5px solid var(--teal);outline-offset:2px}
+.check.is-lit span{animation:litChip .9s ease}
+@keyframes litChip{0%{box-shadow:0 0 0 4px rgba(15,122,107,.3)}100%{box-shadow:0 0 0 0 rgba(15,122,107,0)}}
+
+.notes-box{grid-column:1/-1;border-color:rgba(15,122,107,.35);background:linear-gradient(178deg,var(--teal-lift),var(--shell) 62%)}
+.notes-hint{font-size:13px;color:var(--ink-3);margin:10px 0 0;line-height:1.55}
+.submit-row{grid-column:1/-1;display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:4px}
+
+/* ============ results ============ */
+.results{max-width:1180px;margin:0 auto;padding:8px 26px 100px}
+.col-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
+
+.pet{
+  display:flex;flex-direction:column;text-align:left;width:100%;
+  background:var(--shell);color:var(--ink-2);border:1px solid var(--hair);
+  border-radius:18px;overflow:hidden;
+  box-shadow:var(--lift-1);
+  transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease,border-color .22s ease;
+  animation:cardIn .5s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+.pet:hover{transform:translateY(-5px);box-shadow:var(--lift-3);border-color:var(--hair-2)}
+.pet.is-top{border-color:rgba(15,122,107,.4)}
+.pet-crown{
+  display:flex;align-items:center;gap:7px;
+  background:linear-gradient(90deg,var(--teal-2),var(--teal));color:#EAFBF6;
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  padding:6px 14px;
+}
+.pet-stage{position:relative;height:206px;background:linear-gradient(168deg,var(--sun-2),var(--sun-3))}
+.pet-stage .dio{position:absolute;inset:12px 12px 0;--arch:96px 96px 0 0}
+.pet-stage .dio-inner{border-radius:96px 96px 0 0}
+.pet-score-badge{
+  position:absolute;top:12px;right:12px;z-index:4;
+  background:var(--shell);border-radius:12px;padding:7px 11px;text-align:center;
+  box-shadow:var(--lift-2);
+}
+.pet-score-badge b{display:block;font-family:var(--mono);font-size:21px;font-weight:600;line-height:1;color:var(--teal-2)}
+.pet-score-badge span{display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:3px}
+.p-work b{color:var(--ink)}
+.p-stretch b{color:#A8670C}
+.pet-body{padding:14px 16px 0;flex:1}
+.pet-name{font-family:var(--display);font-size:23px;color:var(--ink);letter-spacing:-.02em;line-height:1.1}
+.pet-meta{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.pet-say{font-size:14px;color:var(--ink-2);line-height:1.55;margin:12px 0 0}
+.pet-say b{color:var(--teal-2);font-weight:650}
+.pet-foot{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;
+  padding:11px 16px 13px;border-top:1px solid var(--hair);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+}
+.pet-foot em{font-style:normal;color:var(--teal-2);font-weight:700}
+
+/* ============ shelter board ============ */
+.board{display:grid;grid-template-columns:minmax(300px,368px) 1fr;align-items:start}
+.roster{border-right:1px solid var(--hair);padding:22px 20px 60px;min-height:calc(100vh - 108px)}
+.ledger{padding:22px 26px 80px;min-width:0;max-width:960px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.kcard{
+  position:relative;width:100%;text-align:left;
+  background:var(--shell);color:var(--ink-2);border:1px solid var(--hair);
+  border-radius:14px;padding:14px 15px 13px 18px;
+  box-shadow:var(--lift-1);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+/* urgency lives in the spine, so the eye reads the queue by color alone */
+.kcard::before{
+  content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;
+}
+.kcard.u-urgent::before{background:var(--cherry)}
+.kcard.u-soon::before{background:var(--marigold)}
+.kcard.u-open::before{background:var(--teal)}
+.kcard:hover{transform:translateX(3px);box-shadow:var(--lift-2)}
+.kcard[aria-pressed="true"]{border-color:var(--teal);box-shadow:0 0 0 1.5px var(--teal),var(--lift-2)}
+.k-days{
+  font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 9px;border-radius:99px;font-weight:600;
+}
+.k-days.u-urgent{background:var(--cherry-lift);color:var(--cherry)}
+.k-days.u-soon{background:var(--marigold-lift);color:#9A5F06}
+.k-days.u-open{background:var(--teal-lift);color:var(--teal-2)}
+.k-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.k-name{font-family:var(--display);font-size:19px;color:var(--ink);letter-spacing:-.02em;display:block}
+.k-id{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);letter-spacing:.08em}
+.k-meta{font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;display:block;margin-top:3px}
+.k-tags{display:flex;flex-wrap:wrap;gap:5px}
+.k-tag{
+  font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border:1px solid var(--hair-2);border-radius:99px;color:var(--ink-3);
+}
+.k-tag.is-need{border-color:rgba(206,58,43,.35);color:var(--cherry);background:var(--cherry-lift)}
+.k-foot{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin-top:11px;padding-top:10px;border-top:1px solid var(--hair);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+}
+.k-eligible.is-zero{color:var(--cherry);font-weight:700}
+
+/* selected-animal header */
+.sel{
+  border:1px solid var(--hair);background:var(--shell);border-radius:18px;
+  padding:20px;margin-bottom:22px;box-shadow:var(--lift-1);
+}
+.sel-name{font-family:var(--display);font-size:30px;color:var(--ink);letter-spacing:-.025em;line-height:1.05}
+.sel-line{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.07em;margin-top:8px;text-transform:uppercase}
+.sel-note{color:var(--ink-2);font-size:14.5px;margin-top:12px;max-width:62ch;line-height:1.6}
+.sel-needs{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.need{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+  padding:4px 10px;border-radius:99px;border:1px solid var(--hair-2);color:var(--ink-3);
+}
+.need.is-hard{border-color:rgba(206,58,43,.35);color:var(--cherry);background:var(--cherry-lift)}
+
+/* foster rows */
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{
+  border:1px solid var(--hair);background:var(--shell);border-radius:14px;
+  transition:border-color .15s ease,box-shadow .15s ease;overflow:hidden;
+}
+.row:hover{border-color:var(--hair-2);box-shadow:var(--lift-1)}
+.row.is-blocked{opacity:.66}
+.row-main{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;width:100%;text-align:left;padding:14px 16px}
+.row-id{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+.row-name{font-size:15.5px;font-weight:650;color:var(--ink)}
+.row-where{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);letter-spacing:.07em;text-transform:uppercase}
+.row-right{display:flex;align-items:center;gap:14px}
+.score{text-align:right;min-width:52px}
+.score b{font-family:var(--mono);font-size:20px;font-weight:600;display:block;line-height:1;color:var(--ink)}
+.score .band{font-family:var(--mono);font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.s-strong b{color:var(--teal-2)}
+.s-stretch b{color:#A8670C}
+.s-blocked b{color:var(--cherry);font-size:15px}
+.meter{width:84px;height:5px;background:var(--sun-3);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--teal);border-radius:99px;transition:width .5s cubic-bezier(.2,.7,.2,1)}
+.s-work .meter i{background:var(--ink-3)}
+.s-stretch .meter i{background:var(--marigold)}
+
+/* the gate strip — a compatibility barcode */
+.gates{display:flex;gap:3px;padding:0 16px 12px;flex-wrap:wrap}
+.gate{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;
+  padding:3px 6px;border-radius:4px;border:1px solid var(--hair);color:var(--ink-3);background:var(--sun);
+}
+.gate.g-pass{border-color:rgba(15,122,107,.3);color:var(--teal-2);background:var(--teal-lift)}
+.gate.g-na{opacity:.4}
+.gate.g-fail{border-color:rgba(206,58,43,.45);background:var(--cherry-lift);color:var(--cherry);text-decoration:line-through}
+
+.why{padding:0 16px 15px;border-top:1px solid var(--hair);margin-top:2px}
+.why[hidden]{display:none}
+.why-h{margin:13px 0 9px}
+.factors{display:flex;flex-direction:column;gap:5px}
+.factor{display:grid;grid-template-columns:1fr auto;gap:12px;font-size:13.5px;color:var(--ink-2);align-items:baseline}
+.factor em{font-style:normal;font-family:var(--mono);font-size:11px}
+.f-pos em{color:var(--teal-2)}
+.f-neg em{color:#A8670C}
+.factor.f-net{margin-top:7px;padding-top:8px;border-top:1px solid var(--hair);color:var(--ink-3)}
+.factor.f-net em{color:var(--ink);font-size:12.5px;font-weight:700}
+.f-block{color:var(--cherry)}
+.f-block em{color:var(--cherry)}
+
+.acts{display:flex;gap:9px;margin-top:15px;flex-wrap:wrap;align-items:center}
+.pending{font-size:13.5px;color:#9A5F06;display:flex;align-items:center;gap:9px;font-weight:600}
+.dot{width:7px;height:7px;border-radius:99px;background:var(--marigold);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.22}}
+
+.empty{
+  border:1.5px dashed var(--hair-2);padding:34px 26px;text-align:center;border-radius:16px;
+  color:var(--ink-3);font-size:14px;line-height:1.6;
+}
+.empty b{display:block;font-family:var(--display);color:var(--ink);font-size:19px;margin-bottom:8px}
+
+/* recruitment advice — AI on the shelter side */
+.recruit{margin-bottom:22px}
+.recruit .ai-body{padding-top:16px}
+.rec-line{display:flex;gap:11px;align-items:baseline;font-size:14px;line-height:1.55;margin-bottom:9px}
+.rec-line:last-child{margin-bottom:0}
+.rec-line i{font-style:normal;color:#35B79E;font-family:var(--mono);font-size:10px;letter-spacing:.1em;flex:none;padding-top:2px}
+.rec-line b{color:#EAF6F2;font-weight:650}
+
+/* drafted message */
+.draft{
+  background:var(--sun);border:1px solid var(--hair-2);border-radius:12px;
+  padding:14px 15px;font-size:14px;line-height:1.6;color:var(--ink-2);
+  white-space:pre-wrap;max-height:230px;overflow-y:auto;
+}
+
+/* ============ offers drawer ============ */
+.scrim{position:fixed;inset:0;background:rgba(35,24,16,.42);backdrop-filter:blur(3px);z-index:50;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.scrim.is-open{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:60;
+  background:var(--sun);border-left:1px solid var(--hair-2);
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column;box-shadow:var(--lift-3);
+}
+.drawer.is-open{transform:none}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--hair)}
+.drawer-h{font-family:var(--display);font-size:19px;color:var(--ink)}
+.drawer-body{overflow-y:auto;padding:18px 20px 40px;flex:1}
+.offer{border-left:3px solid var(--hair-2);padding:10px 0 12px 14px;margin-bottom:15px}
+.offer.o-accepted{border-left-color:var(--teal)}
+.offer.o-declined{border-left-color:var(--cherry)}
+.offer.o-sent{border-left-color:var(--marigold)}
+.offer-t{font-size:14px;line-height:1.5;color:var(--ink-2)}
+.offer-t b{color:var(--ink);font-weight:650}
+.offer-m{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.o-accepted .offer-m{color:var(--teal-2)}
+.o-declined .offer-m{color:var(--cherry)}
+
+/* ============ pet profile modal ============ */
+.modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:22px;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.modal.is-open{opacity:1;pointer-events:auto}
+.modal-bg{position:absolute;inset:0;background:rgba(35,24,16,.5);backdrop-filter:blur(5px)}
+.sheet{
+  position:relative;width:min(800px,100%);max-height:calc(100vh - 44px);overflow-y:auto;
+  background:var(--sun);border-radius:22px;box-shadow:var(--lift-3);
+  transform:translateY(18px) scale(.985);transition:transform .28s cubic-bezier(.32,.72,0,1);
+}
+.modal.is-open .sheet{transform:none}
+.sheet-hero{display:flex;gap:22px;padding:24px;align-items:flex-start;flex-wrap:wrap;background:linear-gradient(170deg,var(--sun-2),var(--sun));border-radius:22px 22px 0 0}
+.sheet-hero .dio{width:150px;height:190px}
+.sheet-id{flex:1;min-width:200px}
+.sheet-name{font-family:var(--display);font-size:clamp(30px,4.4vw,40px);color:var(--ink);letter-spacing:-.03em;line-height:1.03}
+.sheet-meta{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-top:9px}
+.sheet-close{position:absolute;top:16px;right:16px;z-index:5;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:7px 13px;border:1px solid var(--hair-2);border-radius:99px;background:var(--shell)}
+.sheet-close:hover{color:var(--ink);border-color:var(--ink-3)}
+.sheet-body{padding:22px 24px 26px;display:flex;flex-direction:column;gap:22px}
+.spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:12px;overflow:hidden}
+.spec div{background:var(--shell);padding:12px 14px}
+/* Stretch the last cell so a part-filled final row has no orphan gap. */
+.spec div:last-child{grid-column-end:-1}
+.spec dt{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:0}
+.spec dd{margin:6px 0 0;font-size:14px;font-weight:650;color:var(--ink)}
+.sheet-note{font-size:15.5px;line-height:1.7;color:var(--ink-2);max-width:64ch;margin:0}
+.sheet-h{margin:0 0 11px}
+
+/* ============ toast ============ */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,90px);z-index:70;
+  background:var(--ink);color:var(--sun);border-radius:14px;
+  padding:13px 15px 13px 19px;display:flex;align-items:center;gap:18px;
+  box-shadow:var(--lift-3);opacity:0;pointer-events:none;
+  transition:transform .26s cubic-bezier(.32,.72,0,1),opacity .22s ease;
+  max-width:calc(100vw - 32px);
+}
+.toast.is-open{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.toast p{margin:0;font-size:14px;font-weight:500}
+.toast button{font-size:12.5px;font-weight:700;color:#6FD9BC;white-space:nowrap}
+.toast button:hover{text-decoration:underline}
+
+.foot{padding:26px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);text-align:center}
+
+/* ============ responsive ============ */
+@media (max-width:980px){
+  .hero-grid{grid-template-columns:1fr;gap:20px}
+  .cluster{min-height:340px;transform:scale(.86);transform-origin:top center}
+}
+@media (max-width:880px){
+  .intake,.results,.talk-wrap{padding-left:18px;padding-right:18px}
+  .hero{padding:0 18px}
+  .hero-in{padding:36px 0 30px}
+  .board{grid-template-columns:1fr}
+  .roster{border-right:none;border-bottom:1px solid var(--hair);min-height:0;padding-bottom:26px}
+  .ledger{padding:22px 18px 60px}
+  .stats{margin-left:0;width:100%}
+  .ops-row{gap:14px}
+  .row-main{grid-template-columns:1fr;gap:11px}
+  .row-right{justify-content:space-between}
+  .score{text-align:left;min-width:0}
+  .meter{flex:1;width:auto}
+  .sheet-hero{gap:16px}
+}
+@media (max-width:560px){
+  .cluster{min-height:290px;transform:scale(.7)}
+  .hero h1{font-size:34px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+  .cluster .dio{animation:none}
+}
+</style>
+</head>
+<body>
+
+<header class="ops">
+  <div class="ops-row">
+    <div class="brand">
+      <span class="brand-word">F<span class="brand-o"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <ellipse cx="12" cy="15.5" rx="6.2" ry="5"/><circle cx="5.6" cy="8.6" r="2.6"/>
+        <circle cx="10.4" cy="5.9" r="2.7"/><circle cx="15.6" cy="5.9" r="2.7"/><circle cx="19.4" cy="9" r="2.5"/>
+      </svg></span>sterMatch</span>
+      <img class="brand-logo" src="logo-mark.png" width="260" height="254" alt="" aria-hidden="true" decoding="async">
+      <em class="brand-sub">Harbor County AC</em>
+    </div>
+    <!-- Present on every screen, both tabs: this site matches with AI. -->
+    <span class="ai-badge" title="Animals and fosters on this site are matched by AI">
+      <span class="beat"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z" fill="currentColor"/></svg>
+      AI matching
+    </span>
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tabFoster" role="tab" aria-selected="true">I want to foster</button>
+      <button class="tab" id="tabShelter" role="tab" aria-selected="false">Shelter board</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="filters" id="filters">
+    <button class="chip" data-f="all" aria-pressed="true">All waiting</button>
+    <button class="chip" data-f="urgent" aria-pressed="false">Urgent</button>
+    <button class="chip" data-f="dog" aria-pressed="false">Dogs</button>
+    <button class="chip" data-f="cat" aria-pressed="false">Cats</button>
+    <button class="chip" data-f="small" aria-pressed="false">Small animals</button>
+    <button class="chip" data-f="stuck" aria-pressed="false">No eligible foster</button>
+  </div>
+</header>
+
+<section id="viewFoster">
+
+  <!-- ========== hero ========== -->
+  <div class="hero">
+    <div class="hero-in">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z" fill="currentColor"/></svg>
+            Matched by AI
+            <em>reads plain language</em>
+          </div>
+          <h1>Tell us about your home.<br>Our <em>AI</em> tells you who fits in it.</h1>
+          <p class="hero-p">Not a wishlist — a fit. Describe your place the way you'd say it out loud.
+            <b>An AI reads it</b>, works out what you can actually take, which animals clear every
+            hard constraint, and exactly why. It shows every step of its reasoning.</p>
+          <div class="hero-acts">
+            <button class="btn is-primary" id="goTalk">Describe my home</button>
+            <button class="btn is-ghost" id="goBoard">See who's waiting</button>
+          </div>
+          <div class="hero-tally" id="heroTally"></div>
+        </div>
+
+        <!-- SIGNATURE: four animals lifted onto separate z-planes -->
+        <div class="cluster" id="cluster" aria-hidden="true"><div class="cluster-in" id="clusterIn"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== conversational intake ========== -->
+  <div class="talk-wrap">
+    <div class="talk">
+      <div class="ai-panel" id="talkPanel">
+        <div class="ai-head">
+          <span class="ai-mark">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z"
+                    fill="#EAFBF6" opacity=".95"/>
+            </svg>
+          </span>
+          <span style="flex:1;min-width:160px">
+            <span class="ai-title" style="display:block">Describe your home to the AI</span>
+            <span class="ai-sub">AI matching · plain language · no forms required</span>
+          </span>
+          <span class="ai-sub" id="talkCount"></span>
+        </div>
+        <div class="ai-body">
+          <label>
+            <span class="lbl" style="display:block;margin-bottom:9px">Write it however you'd say it</span>
+            <textarea class="talk-area" id="talkArea" rows="5"
+              placeholder="I'm in a second-floor walk-up on the east side, about ten minutes from you. I work from home so someone's here all day. I'd really love a senior — I'm not up for puppy energy. I've got a cat already who tolerates about anything. I can do meds, I'm a nurse. Nothing too big, and I'd rather not take a bonded pair for my first one."></textarea>
+          </label>
+          <div class="talk-acts">
+            <button class="btn is-bright" id="readHome">Read my home</button>
+            <button class="btn on-dark" id="fillDemo">Use an example</button>
+            <button class="btn on-dark" id="clearTalk">Clear</button>
+          </div>
+          <p class="talk-hint" id="talkHint">The AI pulls your constraints straight out of this and fills the form below.
+            You can correct anything it gets wrong.</p>
+
+          <div class="ai-chips" id="aiChips"></div>
+          <p class="ai-none" id="aiNone" hidden></p>
+          <div class="asks" id="asks"></div>
+          <div class="stream" id="stream" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== structured form ========== -->
+  <div class="intake" id="intakeWrap">
+    <div class="rule"><span class="lbl">What the AI pulled out of your description</span></div>
+    <p class="sec-p" style="margin:-14px 0 22px">Everything here was filled in by the AI from your own words. Change anything it
+      got wrong — the hard ones decide who you <em>can</em> take, the rest decide who you'd suit best.</p>
+
+    <form class="form" id="fosterForm">
+      <div class="fieldset" data-fs="you">
+        <span class="lbl">About you</span>
+        <label class="field"><span>Your name</span>
+          <input class="input" name="name" placeholder="Jordan Avery"></label>
+        <label class="field"><span>Neighborhood</span>
+          <input class="input" name="area" placeholder="Eastside"></label>
+        <label class="field"><span>Distance from the shelter</span>
+          <select class="select" name="miles">
+            <option value="2">Under 5 miles</option>
+            <option value="8" selected>5–12 miles</option>
+            <option value="17">Over 12 miles</option>
+          </select></label>
+      </div>
+
+      <div class="fieldset" data-fs="home">
+        <span class="lbl">Your household</span>
+        <div class="field"><span>Who already lives with you?</span>
+          <div class="checks">
+            <label class="check"><input type="checkbox" name="residentCats"><span>Cats</span></label>
+            <label class="check"><input type="checkbox" name="residentDogs"><span>Dogs</span></label>
+            <label class="check"><input type="checkbox" name="kidsAtHome"><span>Kids</span></label>
+            <label class="check"><input type="checkbox" name="yard"><span>Fenced yard</span></label>
+          </div>
+        </div>
+        <label class="field"><span>Hours the animal would be alone on a normal day</span>
+          <select class="select" name="awayHrs">
+            <option value="1">I'm home nearly all day</option>
+            <option value="4" selected>About 4 hours</option>
+            <option value="7">About 7 hours</option>
+            <option value="10">10 hours or more</option>
+          </select></label>
+      </div>
+
+      <div class="fieldset" data-fs="take">
+        <span class="lbl">What you can take</span>
+        <div class="field"><span>Species you'd foster</span>
+          <div class="checks">
+            <label class="check"><input type="checkbox" name="species" value="dog" checked><span>Dogs</span></label>
+            <label class="check"><input type="checkbox" name="species" value="cat"><span>Cats</span></label>
+            <label class="check"><input type="checkbox" name="species" value="small"><span>Small animals</span></label>
+          </div>
+        </div>
+        <div class="field"><span>Sizes that work in your space</span>
+          <div class="checks">
+            <label class="check"><input type="checkbox" name="sizes" value="small" checked><span>Small</span></label>
+            <label class="check"><input type="checkbox" name="sizes" value="medium" checked><span>Medium</span></label>
+            <label class="check"><input type="checkbox" name="sizes" value="large"><span>Large</span></label>
+            <label class="check"><input type="checkbox" name="sizes" value="giant"><span>Giant</span></label>
+          </div>
+        </div>
+        <label class="field"><span>Longest stay you can commit to</span>
+          <select class="select" name="maxWeeks">
+            <option value="2">2 weeks</option>
+            <option value="6" selected>6 weeks</option>
+            <option value="12">12 weeks</option>
+            <option value="24">However long it takes</option>
+          </select></label>
+        <label class="field"><span>How many animals at once</span>
+          <select class="select" name="capacity">
+            <option value="1" selected>One</option>
+            <option value="2">Two</option>
+            <option value="3">Three</option>
+          </select></label>
+      </div>
+
+      <div class="fieldset" data-fs="exp">
+        <span class="lbl">Experience</span>
+        <label class="field"><span>How much fostering have you done?</span>
+          <select class="select" name="tier">
+            <option value="1">This would be my first</option>
+            <option value="2" selected>A few placements</option>
+            <option value="3">Plenty — I'm comfortable with hard cases</option>
+            <option value="4">I take the ones nobody else will</option>
+          </select></label>
+        <label class="field"><span>Energy level you'd prefer</span>
+          <select class="select" name="energyPref">
+            <option value="any" selected>No preference</option>
+            <option value="low">Calm</option>
+            <option value="med">Middle of the road</option>
+            <option value="high">Active</option>
+          </select></label>
+        <div class="field"><span>Medical care</span>
+          <div class="checks">
+            <label class="check"><input type="checkbox" name="medicalOK"><span>I can give meds &amp; do rechecks</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn is-primary" type="submit">Find my matches with AI</button>
+        <span class="lbl" id="formHint">AI matching · 10 animals waiting · 9 hard constraints checked</span>
+      </div>
+    </form>
+  </div>
+
+  <div class="results" id="results" hidden></div>
+</section>
+
+<main class="board" id="viewShelter" hidden>
+  <section class="roster">
+    <div class="col-head">
+      <span class="lbl">Waiting for placement</span>
+      <span class="lbl" id="rosterCount"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="ledger" id="ledger"></section>
+</main>
+
+<div class="foot">
+  <div class="lockup">
+    <div class="lockup-row">
+      <span class="brand-word" style="font-size:22px">F<span class="brand-o"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <ellipse cx="12" cy="15.5" rx="6.2" ry="5"/><circle cx="5.6" cy="8.6" r="2.6"/>
+        <circle cx="10.4" cy="5.9" r="2.7"/><circle cx="15.6" cy="5.9" r="2.7"/><circle cx="19.4" cy="9" r="2.5"/>
+      </svg></span>sterMatch</span>
+      <img class="brand-logo" src="logo-mark.png" width="260" height="254" alt="" aria-hidden="true" decoding="async">
+    </div>
+    <span class="lockup-tag">Find your perfect pet match</span>
+  </div>
+  <p style="margin:0 0 8px">FosterMatch uses AI to match animals with foster homes · every animal, foster and response here is invented · reset from the shelter board</p>
+  <p style="margin:0;text-transform:none;letter-spacing:.02em;font-size:10.5px;line-height:1.6;max-width:74ch;margin-inline:auto">
+    Photographs are stock images of real animals used as placeholders. They are
+    <b>not</b> the animals described on this page, and none of the medical or
+    behavioural notes here relate to the animals pictured.
+    Sources: dog.ceo, TheCatAPI, and Wikimedia Commons.
+  </p>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Placement offers" aria-hidden="true">
+  <div class="drawer-head">
+    <div class="drawer-h">Placement offers</div>
+    <button class="btn is-sm" id="drawerClose">Close</button>
+  </div>
+  <div class="drawer-body" id="offers"></div>
+</aside>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="sheetName">
+  <div class="modal-bg" id="modalBg"></div>
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <p id="toastMsg"></p>
+  <button id="toastAct" hidden></button>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   DATA
+   ============================================================ */
+
+// Difficulty tiers: 1 easy · 2 moderate · 3 experienced · 4 specialist
+const ANIMALS = [
+  { id:"K-114", name:"Rooster", species:"dog", breed:"Pit mix", age:3, size:"large", energy:"high",
+    weeks:6, deadlineDays:2, tier:3,
+    catSafe:false, dogSafe:true, kidSafe:false, needsYard:true, maxAloneHrs:5, medical:null,
+    note:"Owner surrender after eviction. Kennel-stressed and losing weight — needs out of the building fast. Excellent with other dogs, has never met a cat." },
+
+  { id:"K-121", name:"Marigold", species:"cat", breed:"DSH", age:1, size:"small", energy:"med",
+    weeks:3, deadlineDays:1, tier:4,
+    catSafe:true, dogSafe:false, kidSafe:true, needsYard:false, maxAloneHrs:4, medical:"Nursing four kittens, bottle top-ups every 4 hrs",
+    note:"Came in pregnant, gave birth Tuesday. Litter needs to stay together and out of the shelter — upper respiratory is circulating on the cat side." },
+
+  { id:"K-108", name:"Dot", species:"dog", breed:"Beagle", age:8, size:"medium", energy:"low",
+    weeks:2, deadlineDays:9, tier:1,
+    catSafe:true, dogSafe:true, kidSafe:true, needsYard:false, maxAloneHrs:8, medical:null,
+    note:"Senior owner moved into assisted living. Housetrained, sleeps most of the day, good with absolutely everyone." },
+
+  { id:"K-133", name:"Bishop", species:"dog", breed:"Shepherd mix", age:5, size:"large", energy:"high",
+    weeks:8, deadlineDays:4, tier:4,
+    catSafe:false, dogSafe:false, kidSafe:false, needsYard:true, maxAloneHrs:4, medical:"Twice-daily trazodone",
+    note:"Bite history with a stranger at the fence line. Solo-home placement only, adults only, no through-traffic. Needs someone who has done reactivity work before." },
+
+  { id:"K-127", name:"Pepita", species:"cat", breed:"Tortie", age:4, size:"small", energy:"low",
+    weeks:4, deadlineDays:12, tier:2,
+    catSafe:false, dogSafe:false, kidSafe:true, needsYard:false, maxAloneHrs:10, medical:null,
+    note:"Wants to be the only animal in the house and is very clear about it. Affectionate with people once she has a room to herself." },
+
+  { id:"K-140", name:"Juniper", species:"small", breed:"Lop rabbit", age:2, size:"small", energy:"low",
+    weeks:3, deadlineDays:6, tier:2,
+    catSafe:false, dogSafe:false, kidSafe:true, needsYard:false, maxAloneHrs:12, medical:"Molar spurs — soft food, recheck in 3 weeks",
+    note:"Litter-trained and free-roams a bedroom. Cannot be housed where a dog or cat can reach her enclosure." },
+
+  { id:"K-119", name:"Tuck", species:"dog", breed:"Terrier mix", age:1, size:"small", energy:"high",
+    weeks:5, deadlineDays:7, tier:2,
+    catSafe:true, dogSafe:true, kidSafe:true, needsYard:false, maxAloneHrs:6, medical:"Recovering from neuter — cone until the 24th",
+    note:"Adolescent and into everything. Needs a foster who will keep up the crate training we started here." },
+
+  { id:"K-136", name:"Ash & Ember", species:"cat", breed:"DSH kittens", age:0, size:"small", energy:"high",
+    weeks:5, deadlineDays:3, tier:3,
+    catSafe:true, dogSafe:true, kidSafe:true, needsYard:false, maxAloneHrs:5, medical:"Ringworm — twice-weekly lime dip, separate laundry",
+    note:"Bonded pair, must place together. Ringworm makes them a hard ask, but they are otherwise thriving and very social." },
+
+  { id:"K-145", name:"Wendell", species:"small", breed:"Rex rabbit", age:3, size:"small", energy:"low",
+    weeks:10, deadlineDays:4, tier:4,
+    catSafe:false, dogSafe:false, kidSafe:false, needsYard:false, maxAloneHrs:5, medical:"Fractured pelvis — cage rest, pain meds twice daily, weekly rechecks",
+    note:"Hit by a car. Ten weeks of cage rest ahead and he cannot be handled by children while he is in pain. No one on the current roster clears all of it." },
+
+  { id:"K-142", name:"Callahan", species:"dog", breed:"Great Dane", age:6, size:"giant", energy:"med",
+    weeks:10, deadlineDays:5, tier:3,
+    catSafe:true, dogSafe:true, kidSafe:true, needsYard:true, maxAloneHrs:7, medical:"Heartworm treatment — strict crate rest, no stairs",
+    note:"Heartworm positive, mid-treatment. Needs a ground-floor home with a yard and someone who can enforce eight weeks of doing nothing." }
+];
+
+const FOSTERS = [
+  { id:"F-01", name:"Maya Reyes", area:"Eastside", miles:3,
+    species:["dog"], residentCats:false, residentDogs:true, kidsAtHome:false,
+    yard:true, maxWeeks:12, awayHrs:2, medicalOK:true, tier:4, capacity:2, current:0,
+    sizes:["medium","large","giant"], energyPref:"high", placements90:1, prior:{dog:14,cat:0,small:0},
+    wants:"Takes the dogs nobody else will. Has done two bite-history placements." },
+
+  { id:"F-02", name:"Dev Okonkwo", area:"Riverbend", miles:11,
+    species:["cat","small"], residentCats:true, residentDogs:false, kidsAtHome:false,
+    yard:false, maxWeeks:6, awayHrs:9, medicalOK:false, tier:2, capacity:3, current:1,
+    sizes:["small"], energyPref:"low", placements90:2, prior:{dog:0,cat:9,small:2},
+    wants:"Quiet adult cats. Out of the house most weekdays." },
+
+  { id:"F-03", name:"Nora Fitch", area:"Downtown", miles:2,
+    species:["cat"], residentCats:false, residentDogs:false, kidsAtHome:false,
+    yard:false, maxWeeks:8, awayHrs:1, medicalOK:true, tier:4, capacity:2, current:0,
+    sizes:["small"], energyPref:"any", placements90:3, prior:{dog:0,cat:31,small:0},
+    wants:"Vet tech. Works from home. Neonates, bottle babies, ringworm — the medical cases." },
+
+  { id:"F-04", name:"The Alvarez family", area:"Northgate", miles:8,
+    species:["dog","small"], residentCats:false, residentDogs:false, kidsAtHome:true,
+    yard:true, maxWeeks:4, awayHrs:5, medicalOK:false, tier:1, capacity:1, current:0,
+    sizes:["small","medium"], energyPref:"med", placements90:1, prior:{dog:3,cat:0,small:1},
+    wants:"Two kids, 9 and 12. Wants an easy first-timer for a short stay." },
+
+  { id:"F-05", name:"Sam Whitaker", area:"Eastside", miles:5,
+    species:["dog"], residentCats:true, residentDogs:false, kidsAtHome:false,
+    yard:true, maxWeeks:16, awayHrs:6, medicalOK:true, tier:3, capacity:2, current:1,
+    sizes:["medium","large","giant"], energyPref:"med", placements90:1, prior:{dog:11,cat:0,small:0},
+    wants:"Ground-floor house, big fenced yard. Has fostered two heartworm cases." },
+
+  { id:"F-06", name:"Priya Nandakumar", area:"Riverbend", miles:14,
+    species:["cat","small"], residentCats:false, residentDogs:false, kidsAtHome:true,
+    yard:false, maxWeeks:5, awayHrs:3, medicalOK:true, tier:3, capacity:2, current:0,
+    sizes:["small"], energyPref:"any", placements90:0, prior:{dog:0,cat:6,small:4},
+    wants:"Rabbits and small animals especially. Spare room stays empty for fosters." },
+
+  { id:"F-07", name:"Curtis Byrne", area:"Southfield", miles:19,
+    species:["dog"], residentCats:false, residentDogs:true, kidsAtHome:false,
+    yard:true, maxWeeks:3, awayHrs:8, medicalOK:false, tier:2, capacity:1, current:0,
+    sizes:["small","medium"], energyPref:"high", placements90:4, prior:{dog:7,cat:0,small:0},
+    wants:"Short stays only — travels for work every few weeks." },
+
+  { id:"F-08", name:"Hana Beck", area:"Downtown", miles:1,
+    species:["cat","dog"], residentCats:true, residentDogs:false, kidsAtHome:false,
+    yard:false, maxWeeks:10, awayHrs:4, medicalOK:true, tier:3, capacity:2, current:0,
+    sizes:["small","medium"], energyPref:"low", placements90:2, prior:{dog:4,cat:12,small:0},
+    wants:"Apartment near the shelter. Seniors and cats that need decompression." },
+
+  { id:"F-09", name:"Tomas Lind", area:"Northgate", miles:7,
+    species:["dog"], residentCats:false, residentDogs:false, kidsAtHome:false,
+    yard:true, maxWeeks:20, awayHrs:1, medicalOK:true, tier:4, capacity:1, current:0,
+    sizes:["large","giant"], energyPref:"any", placements90:0, prior:{dog:19,cat:0,small:0},
+    wants:"Retired, home all day, six-foot fence. Long-stay behavior cases." },
+
+  { id:"F-10", name:"Rae Dunleavy", area:"Eastside", miles:4,
+    species:["cat"], residentCats:true, residentDogs:true, kidsAtHome:false,
+    yard:true, maxWeeks:6, awayHrs:5, medicalOK:false, tier:2, capacity:3, current:2,
+    sizes:["small"], energyPref:"any", placements90:5, prior:{dog:0,cat:16,small:0},
+    wants:"Cat-only fosterer with a full house at the moment." },
+
+  { id:"F-11", name:"Grace Mbeki", area:"Southfield", miles:16,
+    species:["dog","cat","small"], residentCats:false, residentDogs:false, kidsAtHome:false,
+    yard:true, maxWeeks:8, awayHrs:7, medicalOK:true, tier:2, capacity:2, current:0,
+    sizes:["small","medium","large"], energyPref:"med", placements90:1, prior:{dog:5,cat:3,small:1},
+    wants:"Flexible on species. Prefers a heads-up before pickup." },
+
+  { id:"F-12", name:"Ivo Petrov", area:"Downtown", miles:2,
+    species:["dog"], residentCats:false, residentDogs:false, kidsAtHome:true,
+    yard:false, maxWeeks:2, awayHrs:10, medicalOK:false, tier:1, capacity:1, current:0,
+    sizes:["small"], energyPref:"low", placements90:0, prior:{dog:1,cat:0,small:0},
+    wants:"New foster, one weekend sleepover so far." },
+
+  { id:"F-13", name:"Lucia Serrano", area:"Riverbend", miles:12,
+    species:["cat"], residentCats:false, residentDogs:false, kidsAtHome:false,
+    yard:false, maxWeeks:12, awayHrs:2, medicalOK:true, tier:4, capacity:3, current:1,
+    sizes:["small"], energyPref:"any", placements90:2, prior:{dog:0,cat:24,small:0},
+    wants:"Runs a dedicated kitten room. Comfortable with contagious cases." },
+
+  { id:"F-14", name:"Odell Frazier", area:"Northgate", miles:9,
+    species:["dog"], residentCats:false, residentDogs:true, kidsAtHome:true,
+    yard:true, maxWeeks:6, awayHrs:4, medicalOK:true, tier:2, capacity:2, current:0,
+    sizes:["medium","large"], energyPref:"high", placements90:2, prior:{dog:8,cat:0,small:0},
+    wants:"Two kids and a resident lab who loves everybody." }
+];
+
+/* ============================================================
+   PORTRAITS
+
+   Drawn, not photographed — these are illustrations built from
+   primitives so every animal has a distinct face with no external
+   image requests.
+   ============================================================ */
+
+const LOOKS = {
+  "K-114":{ form:"dog", ear:"perky",  coat:"#B58455", coat2:"#8A5C31", pattern:"patch",  eye:"#6E4A18" },
+  "K-121":{ form:"cat", ear:"perky",  coat:"#D98C42", coat2:"#B06A26", pattern:"tabby",  eye:"#4C7A3C" },
+  "K-108":{ form:"dog", ear:"floppy", coat:"#CBA671", coat2:"#4A3728", pattern:"tri",    eye:"#4A3320" },
+  "K-133":{ form:"dog", ear:"perky",  coat:"#8A6A46", coat2:"#33281F", pattern:"mask",   eye:"#5A3E16" },
+  "K-127":{ form:"cat", ear:"perky",  coat:"#3E3733", coat2:"#C97C2E", pattern:"tortie", eye:"#C2A23A" },
+  "K-140":{ form:"rab", ear:"lop",    coat:"#C0B1A0", coat2:"#8F7F6C", pattern:"patch",  eye:"#4A3A2E" },
+  "K-119":{ form:"dog", ear:"floppy", coat:"#DCCBA4", coat2:"#B39C71", pattern:"solid",  eye:"#4A3320" },
+  "K-136":{ form:"cat", ear:"perky",  coat:"#8E959B", coat2:"#646C73", pattern:"tabby",  eye:"#5FA36E" },
+  "K-145":{ form:"rab", ear:"up",     coat:"#7A6252", coat2:"#5A473A", pattern:"solid",  eye:"#3A2E26" },
+  "K-142":{ form:"dog", ear:"floppy", coat:"#6E757B", coat2:"#565C61", pattern:"solid",  eye:"#4A4238" }
+};
+
+/* ------------------------------------------------------------
+   PHOTOGRAPHS
+
+   Real animals, but NOT the animals described here — these are stock
+   images standing in for invented records, which is why the footer says
+   so outright. Every URL was checked by eye for species and breed before
+   being used; the drawn portrait below stays as the fallback so a blocked
+   or offline image degrades to something rather than an empty frame.
+
+   Sources: dog.ceo · TheCatAPI · Wikimedia Commons.
+   ------------------------------------------------------------ */
+
+const PHOTOS = {
+  "K-108":"https://images.dog.ceo/breeds/beagle/n02088364_12154.jpg",          // Dot — beagle
+  "K-114":"https://images.dog.ceo/breeds/pitbull/siena-123.jpg",               // Rooster — pit mix
+  "K-133":"https://images.dog.ceo/breeds/german-shepherd/n02106662_4059.jpg",  // Bishop — shepherd
+  "K-142":"https://images.dog.ceo/breeds/dane-great/n02109047_8090.jpg",       // Callahan — great dane
+  "K-119":"https://images.dog.ceo/breeds/terrier-norfolk/n02094114_3378.jpg",  // Tuck — small terrier
+  // Marigold — ginger, sitting head-on, which survives a portrait crop
+  "K-121":"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/%DA%AF%D8%B1%D8%A8%D9%87_-%D8%AA%D9%87%D8%B1%D8%A7%D9%86-cat_in_iran_10.jpg/960px-%DA%AF%D8%B1%D8%A8%D9%87_-%D8%AA%D9%87%D8%B1%D8%A7%D9%86-cat_in_iran_10.jpg",
+  // Pepita — alone on a stump, which suits a cat that wants no housemates
+  "K-127":"https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Une_des_chattes_tigr%C3%A9es.JPG/960px-Une_des_chattes_tigr%C3%A9es.JPG",
+  // Ash & Ember — two kittens side by side, since the pair cannot be split.
+  // Deliberately not the staged "kittens sharing a milkshake" shot: dairy
+  // upsets most cats and it is the wrong thing to model on a welfare site.
+  "K-136":"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/20131203_kittens_B.jpg/960px-20131203_kittens_B.jpg",
+  "K-140":"https://upload.wikimedia.org/wikipedia/commons/a/a7/Mini_lop.jpg",  // Juniper — lop rabbit
+  "K-145":"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Rex_rabbit_%28black%29.jpg/960px-Rex_rabbit_%28black%29.jpg"
+};
+
+function photoImg(a, eager){
+  const src = PHOTOS[a.id];
+  if(!src) return "";
+  return '<img class="dio-photo" src="' + src + '" alt="' + esc(a.name) + ', a ' + esc(a.breed) + '" ' +
+    'loading="' + (eager ? "eager" : "lazy") + '" decoding="async" referrerpolicy="no-referrer" ' +
+    'onerror="this.hidden=true">';
+}
+
+let portraitSeq = 0;
+
+function portrait(a, size){
+  const L = LOOKS[a.id] || { form:"dog", ear:"floppy", coat:"#9A8A76", coat2:"#7A6A56", pattern:"solid", eye:"#3A2E20" };
+  // The same animal is drawn in several places at once; ids must stay unique.
+  const uid = a.id.replace(/[^A-Za-z0-9]/g, "") + "-" + (++portraitSeq);
+  const cid = "clip-" + uid, fid = "lift-" + uid;
+  const dark = "#241C16";
+  let head = "", ears = "", face = "";
+
+  if(L.form === "cat"){
+    ears = '<path d="M23 34 L21 6 L45 21 Z" fill="' + L.coat + '"/>' +
+           '<path d="M77 34 L79 6 L55 21 Z" fill="' + L.coat + '"/>' +
+           '<path d="M28 30 L27 14 L41 22 Z" fill="#C98B96" opacity=".55"/>' +
+           '<path d="M72 30 L73 14 L59 22 Z" fill="#C98B96" opacity=".55"/>';
+    head = '<ellipse cx="50" cy="55" rx="30" ry="27" fill="' + L.coat + '"/>';
+    face = '<ellipse cx="39" cy="52" rx="4.6" ry="5.6" fill="' + L.eye + '"/>' +
+           '<ellipse cx="61" cy="52" rx="4.6" ry="5.6" fill="' + L.eye + '"/>' +
+           '<ellipse cx="39" cy="52" rx="1.9" ry="4.2" fill="' + dark + '"/>' +
+           '<ellipse cx="61" cy="52" rx="1.9" ry="4.2" fill="' + dark + '"/>' +
+           '<circle cx="40.6" cy="49.6" r="1.3" fill="#fff" opacity=".85"/>' +
+           '<circle cx="62.6" cy="49.6" r="1.3" fill="#fff" opacity=".85"/>' +
+           '<path d="M46 63 L54 63 L50 68 Z" fill="#C98B96"/>' +
+           '<path d="M50 68 Q50 73 44 72 M50 68 Q50 73 56 72" stroke="' + dark + '" stroke-width="1.6" fill="none" opacity=".7" stroke-linecap="round"/>' +
+           '<path d="M20 58 L34 62 M20 66 L34 67 M80 58 L66 62 M80 66 L66 67" stroke="' + dark + '" stroke-width="1.1" opacity=".38" stroke-linecap="round"/>';
+  }else if(L.form === "rab"){
+    ears = L.ear === "lop"
+      ? '<ellipse cx="24" cy="50" rx="9" ry="21" fill="' + L.coat + '" transform="rotate(-38 24 50)"/>' +
+        '<ellipse cx="76" cy="50" rx="9" ry="21" fill="' + L.coat + '" transform="rotate(38 76 50)"/>'
+      : '<ellipse cx="37" cy="23" rx="7.5" ry="22" fill="' + L.coat + '" transform="rotate(-7 37 23)"/>' +
+        '<ellipse cx="63" cy="23" rx="7.5" ry="22" fill="' + L.coat + '" transform="rotate(7 63 23)"/>' +
+        '<ellipse cx="37" cy="25" rx="3.6" ry="15" fill="#C98B96" opacity=".45" transform="rotate(-7 37 25)"/>' +
+        '<ellipse cx="63" cy="25" rx="3.6" ry="15" fill="#C98B96" opacity=".45" transform="rotate(7 63 25)"/>';
+    head = '<ellipse cx="50" cy="60" rx="27" ry="25" fill="' + L.coat + '"/>';
+    face = '<circle cx="39" cy="57" r="4.4" fill="' + L.eye + '"/>' +
+           '<circle cx="61" cy="57" r="4.4" fill="' + L.eye + '"/>' +
+           '<circle cx="40.6" cy="55.2" r="1.4" fill="#fff" opacity=".85"/>' +
+           '<circle cx="62.6" cy="55.2" r="1.4" fill="#fff" opacity=".85"/>' +
+           '<path d="M46 68 L54 68 L50 72 Z" fill="#C98B96"/>' +
+           '<path d="M50 72 L50 76 M50 76 Q45 78 43 75 M50 76 Q55 78 57 75" stroke="' + dark + '" stroke-width="1.5" fill="none" opacity=".65" stroke-linecap="round"/>';
+  }else{
+    ears = L.ear === "floppy"
+      ? '<ellipse cx="21" cy="56" rx="10" ry="21" fill="' + L.coat2 + '" transform="rotate(-14 21 56)"/>' +
+        '<ellipse cx="79" cy="56" rx="10" ry="21" fill="' + L.coat2 + '" transform="rotate(14 79 56)"/>'
+      : '<path d="M24 36 L20 9 L44 24 Z" fill="' + L.coat2 + '"/>' +
+        '<path d="M76 36 L80 9 L56 24 Z" fill="' + L.coat2 + '"/>';
+    head = '<ellipse cx="50" cy="50" rx="28" ry="26" fill="' + L.coat + '"/>';
+    // A masked dog keeps the dark muzzle; otherwise the snout matches the coat.
+    face = '<ellipse cx="50" cy="70" rx="16" ry="12.5" fill="' + (L.pattern === "mask" ? L.coat2 : L.coat) + '" filter="url(#' + fid + ')"/>' +
+           '<ellipse cx="39" cy="47" rx="4.3" ry="4.8" fill="' + L.eye + '"/>' +
+           '<ellipse cx="61" cy="47" rx="4.3" ry="4.8" fill="' + L.eye + '"/>' +
+           '<circle cx="40.4" cy="45.2" r="1.4" fill="#fff" opacity=".85"/>' +
+           '<circle cx="62.4" cy="45.2" r="1.4" fill="#fff" opacity=".85"/>' +
+           '<ellipse cx="50" cy="64" rx="6" ry="4.6" fill="' + dark + '"/>' +
+           '<path d="M50 69 L50 73 M50 73 Q44 76 41 72 M50 73 Q56 76 59 72" stroke="' + dark + '" stroke-width="1.7" fill="none" opacity=".75" stroke-linecap="round"/>';
+  }
+
+  let pat = "";
+  if(L.pattern === "tabby"){
+    // Kept inside the head ellipse (cx50 cy55 rx30 ry27) or the clip eats them.
+    pat = '<path d="M33 41 Q50 32 67 41 M37 32 Q50 25 63 32" stroke="' + L.coat2 + '" stroke-width="3.4" fill="none" opacity=".85" stroke-linecap="round"/>' +
+          '<path d="M22 52 Q30 56 26 63 M78 52 Q70 56 74 63" stroke="' + L.coat2 + '" stroke-width="3" fill="none" opacity=".6" stroke-linecap="round"/>';
+  }else if(L.pattern === "tortie"){
+    pat = '<ellipse cx="34" cy="44" rx="17" ry="22" fill="' + L.coat2 + '"/>' +
+          '<ellipse cx="64" cy="70" rx="14" ry="13" fill="' + L.coat2 + '" opacity=".9"/>';
+  }else if(L.pattern === "patch"){
+    pat = '<ellipse cx="38" cy="45" rx="14" ry="13.5" fill="' + L.coat2 + '"/>';
+  }else if(L.pattern === "mask"){
+    pat = '<ellipse cx="50" cy="66" rx="21" ry="17" fill="' + L.coat2 + '"/>' +
+          '<path d="M30 34 Q50 26 70 34" stroke="' + L.coat2 + '" stroke-width="5" fill="none" opacity=".55" stroke-linecap="round"/>';
+  }else if(L.pattern === "tri"){
+    pat = '<ellipse cx="36" cy="42" rx="15" ry="15" fill="' + L.coat2 + '"/>' +
+          '<path d="M50 24 L58 24 L56 52 L50 52 Z" fill="#EDE6D6" opacity=".9"/>';
+  }
+
+  // Shoulders, so the animal sits inside the arch instead of floating in it.
+  const B = L.form === "cat" ? 76 : L.form === "rab" ? 79 : 71;
+  const body =
+    '<path d="M50 ' + B + ' C28 ' + B + ' 17 ' + (B + 18) + ' 15 128 L85 128 C83 ' + (B + 18) + ' 72 ' + B + ' 50 ' + B + ' Z" fill="' + L.coat2 + '"/>' +
+    '<ellipse cx="50" cy="' + (B + 30) + '" rx="17" ry="20" fill="' + L.coat + '" opacity=".55"/>';
+
+  // Every animal wears a collar; the enamel tag carries its placement urgency.
+  const TAGC = { urgent:"#CE3A2B", soon:"#E0912B", open:"#0F7A6B" };
+  const tagFill = TAGC[urgency(a)] || TAGC.open;
+  const cy = B + 15;
+  const collar =
+    '<path d="M31 ' + cy + ' Q50 ' + (cy + 9) + ' 69 ' + cy + '" stroke="#4A3A2E" stroke-width="5" fill="none" opacity=".9" stroke-linecap="round"/>' +
+    '<circle cx="50" cy="' + (cy + 12) + '" r="5.4" fill="' + tagFill + '" stroke="#FFFCF8" stroke-width="1.4"/>' +
+    '<circle cx="48.4" cy="' + (cy + 10.2) + '" r="1.5" fill="#fff" opacity=".55"/>';
+
+  // xMidYMax meet = contain, anchored bottom-centre, so the figure sits on the
+  // floor of the arch at any frame ratio instead of overflowing it.
+  return '<svg viewBox="0 0 100 128" preserveAspectRatio="xMidYMax meet" ' +
+    (size ? 'width="' + size + '" height="' + Math.round(size * 1.28) + '" ' : "") +
+    'role="img" aria-label="Illustrated portrait of ' + esc(a.name) + ', a ' + esc(a.breed) + '">' +
+    '<defs><clipPath id="' + cid + '">' + head + '</clipPath>' +
+    '<filter id="' + fid + '"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity=".18"/></filter></defs>' +
+    body + collar +
+    ears + head +
+    '<g clip-path="url(#' + cid + ')">' + pat + '</g>' +
+    face + '</svg>';
+}
+
+/* The diorama: three z-planes — light wash, animal, arch frame — inside one
+   perspective box. `tilt` wires the pointer parallax that gives it depth. */
+function dio(a, cls, inner){
+  return '<span class="dio ' + (cls || "") + '" data-tilt><span class="dio-inner">' +
+      '<span class="dio-wash"></span>' +
+      '<span class="dio-art">' + portrait(a) + photoImg(a, true) + '</span>' +
+      (inner || "") +
+      '<span class="dio-frame"></span>' +
+    '</span></span>';
+}
+
+// Small fixed-size diorama for dense lists.
+function dioSm(a, px){
+  return '<span class="dio dio-sm" style="width:' + px + 'px;height:' + Math.round(px * 1.2) + 'px" data-tilt>' +
+    '<span class="dio-inner"><span class="dio-wash"></span>' +
+    '<span class="dio-art">' + portrait(a) + photoImg(a) + '</span>' +
+    '<span class="dio-frame"></span></span></span>';
+}
+
+/* Pointer parallax. The frame leads, the animal follows at a shallower angle,
+   which is what sells the separation between the planes. */
+function bindTilt(root){
+  if(window.matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+  const nodes = (root || document).querySelectorAll("[data-tilt]:not([data-tilt-on])");
+  Array.prototype.forEach.call(nodes, el => {
+    el.setAttribute("data-tilt-on", "1");
+    const inner = el.querySelector(".dio-inner");
+    if(!inner) return;
+    const base = el.style.transform || "";
+    el.addEventListener("pointermove", e => {
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - .5;
+      const y = (e.clientY - r.top) / r.height - .5;
+      inner.style.transform = "rotateY(" + (x * 15).toFixed(2) + "deg) rotateX(" + (-y * 13).toFixed(2) + "deg)";
+      el.classList.add("is-tilt");
+    });
+    el.addEventListener("pointerleave", () => {
+      inner.style.transform = "";
+      el.classList.remove("is-tilt");
+    });
+  });
+}
+
+/* ============================================================
+   NOTES → PREFERENCES
+
+   The free-text box is parsed for preferences the checkboxes can't
+   capture. Each rule detects a topic; a negator in the ~26 characters
+   before the hit flips its polarity, so "no puppies" and "I'd love a
+   puppy" resolve to opposite signals rather than the same keyword.
+   ============================================================ */
+
+const NEGATOR = /\b(no|not|non|never|without|cant|cannot|can't|wont|won't|dont|don't|doesn't|isn't|aren't|rather not|prefer not|prefers not|avoid|avoiding|unable|nothing|neither|nor|too much|hate|dislike)\b[^.!?;]{0,26}$/i;
+
+const NOTE_RULES = [
+  { sig:"senior",     pos:/\b(senior|seniors|older|elderly|old dog|old cat|geriatric|golden years)\b/i,
+    yes:"Wants a senior",              no:"Not looking for a senior" },
+  { sig:"young",      pos:/\b(puppy|puppies|kitten|kittens|neonate|bottle bab|baby|babies|young one)\b/i,
+    yes:"Wants a young animal",        no:"No puppies or kittens" },
+  { sig:"calm",       pos:/\b(calm|quiet|mellow|low.?energy|low.?key|lazy|relaxed|chill|couch|napp?)\b/i,
+    yes:"Wants a calm animal",         no:"Doesn't want a couch potato" },
+  { sig:"active",     pos:/\b(active|energetic|high.?energy|hik(e|ing)|jog|run(ning)?|adventur|outdoors|zoomies)\b/i,
+    yes:"Wants an active animal",      no:"Doesn't want high energy" },
+  { sig:"medical",    pos:/\b(medical|meds|medication|injection|syringe|nurse|nursing|vet tech|recovery|recuperat|hospice|special needs)\b/i,
+    yes:"Open to medical cases",       no:"Not up for medical care" },
+  { sig:"stairs",     pos:/\b(stairs|staircase|walk.?up|upstairs|second floor|third floor|flight of)\b/i,
+    yes:"Home has stairs",             no:"Ground floor, no stairs" },
+  { sig:"bonded",     pos:/\b(bonded|pair|two at once|siblings|litter ?mates|more than one)\b/i,
+    yes:"Open to a bonded pair",       no:"One animal at a time" },
+  { sig:"contagious", pos:/\b(contagious|ringworm|quarantine|isolat|upper respiratory|infectious)\b/i,
+    yes:"Can isolate a contagious case", no:"Can't isolate a contagious case" },
+  { sig:"behavior",   pos:/\b(behaviou?r|reactive|reactivity|bite|aggressi|fearful|anxious|anxiety|shy|training|trainer)\b/i,
+    yes:"Comfortable with behavior cases", no:"Not up for behavior cases" },
+  { sig:"shortstay",  pos:/\b(short|brief|few weeks|couple of weeks|temporar|weekend|sleepover|travel|traveling|travelling)\b/i,
+    yes:"Wants a short stay",          no:"Short stays aren't the issue" },
+  { sig:"longstay",   pos:/\b(long.?term|long stay|as long as|however long|no rush|open.?ended|months)\b/i,
+    yes:"Can commit long term",        no:"Can't commit long term" },
+  { sig:"firsttime",  pos:/\b(first.?time|first foster|new to (this|foster)|never fostered|beginner|easy one|ease into)\b/i,
+    yes:"New to fostering",            no:"Not a beginner" },
+  { sig:"homealot",   pos:/\b(work from home|wfh|remote|home all day|retired|always home|home most|stay.?at.?home)\b/i,
+    yes:"Home most of the day",        no:"Not home much" },
+  // Deliberately narrow: indirect cues like "apartment" sit too far from a
+  // negator elsewhere in the sentence and get flipped by mistake. Size is
+  // already captured directly by the checkboxes.
+  { sig:"small",      pos:/\b(small|tiny|little|lap ?dog)\b/i,
+    yes:"Suits a small animal",        no:"Not limited to small animals" },
+  { sig:"big",        pos:/\b(big|large|giant|great dane|mastiff|huge|hefty)\b/i,
+    yes:"Wants a big animal",          no:"Nothing too big" }
+];
+
+/* How strongly it was said. "I'd really love a senior" and "maybe a senior,
+   I guess" both detect the same topic, but they should not carry the same
+   weight, so intensity in the surrounding clause becomes a confidence value
+   that scales the scoring effect later. */
+const INTENSIFIER = /\b(really|very|absolutely|definitely|strongly|desperately|super|extremely|badly|only|must|need|dying to|would love|i'd love|love)\b/i;
+const HEDGE = /\b(maybe|perhaps|possibly|might|somewhat|a bit|a little|kind ?of|kinda|sort ?of|open to|probably|i guess|ideally|slightly|leaning)\b/i;
+
+function readNotes(text){
+  const out = [];
+  if(!text || !text.trim()) return out;
+  const clean = text.replace(/\s+/g, " ");
+  for(const r of NOTE_RULES){
+    const m = r.pos.exec(clean);
+    if(!m) continue;
+    const before = clean.slice(0, m.index);
+    const negated = NEGATOR.test(before);
+
+    // Weigh only the clause the match sits in, not the whole note.
+    const start = Math.max(0, clean.lastIndexOf(".", m.index) + 1);
+    const endRel = clean.slice(m.index).search(/[.!?]/);
+    const end = endRel === -1 ? clean.length : m.index + endRel + 1;
+    const clause = clean.slice(start, end).trim();
+
+    let conf = .62;
+    if(INTENSIFIER.test(clause)) conf += .26;
+    if(HEDGE.test(clause)) conf -= .28;
+    if(negated) conf += .06;              // negations are stated deliberately
+    conf = Math.max(.3, Math.min(.98, conf));
+
+    out.push({
+      sig:r.sig, on:!negated, conf:conf,
+      label:negated ? r.no : r.yes,
+      quote:clause.length > 96 ? clause.slice(0, 96).replace(/\s+\S*$/, "") + "…" : clause
+    });
+  }
+  return out;
+}
+
+/* ============================================================
+   NOTES → FORM
+
+   The conversational box is the real front door, so the same text has to
+   yield the structured constraints too, not just soft preferences. Each
+   rule owns one form control and reports what it heard, so the fill is
+   auditable rather than magic.
+   ============================================================ */
+
+const AREAS = ["Eastside","Riverbend","Downtown","Northgate","Southfield"];
+
+// A topic counts as "owned by the household" only when a possessive or
+// have-verb sits right before it — otherwise "good with cats" reads as a
+// resident cat, which would wrongly gate the animal out.
+const OWNS = w => new RegExp("\\b(i have|we have|i've got|we've got|i own|we own|my|our|there'?s|there is|lives with|living with|resident)\\b[^.!?]{0,24}\\b" + w + "s?\\b", "i");
+
+const EXTRACT = [
+  { field:"name", label:"Your name",
+    // Deliberately not /i — the prefix must tolerate any case, but the capture
+    // has to stay case-sensitive so it only picks up an actual capitalised name.
+    run(t){ const m = /\b(?:[Ii]'?[mM]|[Mm]y name'?s?|[Mm]y name is|[Tt]his is|[Cc]all me)\s+([A-Z][a-z]{1,14})\b/.exec(t);
+            return m && !/^(in|a|at|on|the|not|about|home|looking|hoping|new|open)$/i.test(m[1]) ? { value:m[1], say:"Name: " + m[1] } : null; } },
+
+  { field:"area", label:"Neighborhood",
+    run(t){ const m = new RegExp("\\b(" + AREAS.join("|") + ")\\b", "i").exec(t);
+            if(!m) return null;
+            const v = AREAS.find(a => a.toLowerCase() === m[1].toLowerCase());
+            return { value:v, say:"Neighborhood: " + v }; } },
+
+  { field:"miles", label:"Distance",
+    run(t){
+      const m = /\b(\d{1,2})\s*(?:miles?|mi)\b/i.exec(t);
+      if(m){ const n = +m[1]; return { value:n < 5 ? "2" : n <= 12 ? "8" : "17", say:n + " miles out" }; }
+      if(/\b(walking distance|around the corner|down the (street|road)|a few blocks|minutes away|close by|nearby|right by)\b/i.test(t))
+        return { value:"2", say:"Close to the shelter" };
+      if(/\b(far|other side of|out of town|long drive|way out|rural)\b/i.test(t))
+        return { value:"17", say:"A long way out" };
+      return null; } },
+
+  { field:"residentCats", label:"Resident cats", type:"check",
+    run(t){ if(OWNS("cat").test(t)) return { value:true, say:"You already have a cat" };
+            if(/\b(no|not|don'?t have|without)\b[^.!?]{0,18}\bcats?\b/i.test(t)) return { value:false, say:"No resident cats" };
+            return null; } },
+
+  { field:"residentDogs", label:"Resident dogs", type:"check",
+    run(t){ if(OWNS("dog").test(t)) return { value:true, say:"You already have a dog" };
+            if(/\b(no|not|don'?t have|without)\b[^.!?]{0,18}\bdogs?\b/i.test(t)) return { value:false, say:"No resident dogs" };
+            return null; } },
+
+  { field:"kidsAtHome", label:"Kids at home", type:"check",
+    run(t){ if(/\b(no|not|without|don'?t have)\b[^.!?]{0,20}\b(kids|children)\b/i.test(t)) return { value:false, say:"No kids at home" };
+            if(/\b(kids|children|toddler|my son|my daughter|my kid|a baby|grandkids|\d+ and \d+ year olds?)\b/i.test(t))
+              return { value:true, say:"Kids at home" };
+            return null; } },
+
+  { field:"yard", label:"Fenced yard", type:"check",
+    run(t){ if(/\b(no|not|without|don'?t have|lack)\b[^.!?]{0,22}\b(yard|fence|garden)\b/i.test(t)) return { value:false, say:"No fenced yard" };
+            if(/\b(fenced|fence(d)? (in|yard)|backyard|back yard|big yard|garden|acre)\b/i.test(t)) return { value:true, say:"Fenced yard" };
+            if(/\b(apartment|flat|condo|walk.?up|studio)\b/i.test(t)) return { value:false, say:"Apartment — no yard" };
+            return null; } },
+
+  { field:"awayHrs", label:"Hours alone",
+    run(t){
+      if(/\b(work from home|wfh|remote|home all day|retired|always home|home most|stay.?at.?home|i'?m home)\b/i.test(t))
+        return { value:"1", say:"You're home nearly all day" };
+      const m = /\b(\d{1,2})\s*(?:hours?|hrs?)\b/i.exec(t);
+      if(m){ const n = +m[1]; return { value:n <= 2 ? "1" : n <= 5 ? "4" : n <= 8 ? "7" : "10", say:"Alone about " + n + " hours" }; }
+      if(/\b(long shifts?|twelve.hour|night shift|double shift)\b/i.test(t)) return { value:"10", say:"Long shifts — 10+ hours alone" };
+      if(/\b(full.?time|office|9 ?to ?5|nine to five|commute|in person)\b/i.test(t)) return { value:"7", say:"Out for a working day" };
+      return null; } },
+
+  { field:"maxWeeks", label:"Longest stay",
+    run(t){
+      if(/\b(as long as (it takes|they need)|however long|no rush|open.?ended|permanent|foster.?fail)\b/i.test(t))
+        return { value:"24", say:"However long it takes" };
+      const mo = /\b(\d{1,2})\s*months?\b/i.exec(t);
+      if(mo){ const w = +mo[1] * 4; return { value:w <= 2 ? "2" : w <= 6 ? "6" : w <= 12 ? "12" : "24", say:mo[1] + " months available" }; }
+      const wk = /\b(\d{1,2})\s*weeks?\b/i.exec(t);
+      if(wk){ const n = +wk[1]; return { value:n <= 2 ? "2" : n <= 6 ? "6" : n <= 12 ? "12" : "24", say:n + " weeks available" }; }
+      if(/\b(couple of weeks|a few weeks|short stay|short.?term|weekend|sleepover)\b/i.test(t))
+        return { value:"2", say:"Short stays only" };
+      return null; } },
+
+  { field:"capacity", label:"How many at once",
+    run(t){ if(/\b(one at a time|just one|only one|a single|one animal)\b/i.test(t)) return { value:"1", say:"One at a time" };
+            if(/\b(two at once|two of them|a pair|three)\b/i.test(t)) return { value:"2", say:"Room for two" };
+            return null; } },
+
+  { field:"tier", label:"Experience",
+    run(t){
+      if(/\b(nobody else will|no one else will|hardest cases|toughest|last resort|any case)\b/i.test(t))
+        return { value:"4", say:"Takes the hardest cases" };
+      if(/\b(vet tech|veterinar|nurse|trainer|behaviou?rist|rescue for years|years of|dozens|many placements|experienced|plenty)\b/i.test(t))
+        return { value:"3", say:"Experienced with hard cases" };
+      if(/\b(first.?time|first foster|my first|never fostered|new to (this|foster)|beginner|ease into)\b/i.test(t))
+        return { value:"1", say:"This would be your first" };
+      if(/\b(a few|handful|couple of placements|fostered before|done this before)\b/i.test(t))
+        return { value:"2", say:"A few placements behind you" };
+      return null; } },
+
+  { field:"energyPref", label:"Energy preference",
+    run(t){
+      const calm = /\b(calm|quiet|mellow|low.?energy|lazy|relaxed|chill|couch|napp?)\b/i.test(t);
+      const act  = /\b(active|energetic|high.?energy|hik(e|ing)|jog|running|adventur|zoomies)\b/i.test(t);
+      const negCalm = /\b(no|not|don'?t want|rather not)\b[^.!?]{0,24}\b(calm|lazy|couch)\b/i.test(t);
+      const negAct  = /\b(no|not|don'?t want|rather not|not up for)\b[^.!?]{0,24}\b(active|energetic|high.?energy|puppy energy|zoomies)\b/i.test(t);
+      if(calm && !negCalm) return { value:"low", say:"Prefers a calm animal" };
+      if(negAct) return { value:"low", say:"Not up for high energy" };
+      if(act && !negAct) return { value:"high", say:"Wants an active animal" };
+      return null; } },
+
+  { field:"medicalOK", label:"Medical care", type:"check",
+    run(t){ if(/\b(can'?t|cannot|not able|no|not up for|rather not|uncomfortable)\b[^.!?]{0,26}\b(meds|medication|medical|injections?|pills)\b/i.test(t))
+              return { value:false, say:"Not up for medical care" };
+            if(/\b(vet tech|nurse|give meds|medication|injections?|syringe|i can medicate|pills|rechecks|medical)\b/i.test(t))
+              return { value:true, say:"Can handle meds and rechecks" };
+            return null; } },
+
+  { field:"species", label:"Species", type:"multi",
+    run(t){
+      const v = [];
+      if(/\b(dogs?|puppy|puppies|pup|canine)\b/i.test(t)) v.push("dog");
+      if(/\b(cats?|kitten|kitty|feline)\b/i.test(t)) v.push("cat");
+      if(/\b(rabbit|bunny|bunnies|guinea|hamster|small animals?|critters?)\b/i.test(t)) v.push("small");
+      // Bare "anything" is too loose — "a cat who tolerates anything" is not a
+      // statement about which species the foster will take.
+      if(/\b(any (animal|species|of them)|open to (all|any|anything)|whatever needs|don'?t mind what)\b/i.test(t))
+        return { value:["dog","cat","small"], say:"Open to any species" };
+      return v.length ? { value:v, say:"Open to " + v.map(s => s === "small" ? "small animals" : s + "s").join(" and ") } : null; } },
+
+  { field:"sizes", label:"Sizes", type:"multi",
+    run(t){
+      if(/\b(nothing too big|no big|not too (big|large)|no large|nothing large)\b/i.test(t))
+        return { value:["small","medium"], say:"Nothing too big" };
+      if(/\b(big dogs?|large dogs?|giant|great dane|mastiff|the bigger the better|huge)\b/i.test(t))
+        return { value:["medium","large","giant"], say:"Big animals welcome" };
+      if(/\b(small|tiny|little|lap ?dog|apartment.sized)\b/i.test(t))
+        return { value:["small"], say:"Small animals only" };
+      return null; } }
+];
+
+function extractForm(text){
+  const hits = [];
+  if(!text || !text.trim()) return hits;
+  const clean = text.replace(/\s+/g, " ");
+  for(const r of EXTRACT){
+    let got = null;
+    try{ got = r.run(clean); }catch(e){ got = null; }
+    if(got) hits.push({ field:r.field, type:r.type || "value", label:r.label, value:got.value, say:got.say });
+  }
+  return hits;
+}
+
+/* Questions worth asking back. Only for constraints that actually gate a
+   placement and that the note left genuinely open — asking about something
+   already stated reads as not having listened. */
+const ASK_RULES = [
+  { id:"species", need:h => !h.some(x => x.field === "species"),
+    q:"Which animals would you take? This one decides most of the board.",
+    opts:[ { t:"Dogs", set:{ species:["dog"] } }, { t:"Cats", set:{ species:["cat"] } },
+           { t:"Small animals", set:{ species:["small"] } }, { t:"Any of them", set:{ species:["dog","cat","small"] } } ] },
+  { id:"hours", need:h => !h.some(x => x.field === "awayHrs"),
+    q:"How long would they be on their own during a normal day?",
+    opts:[ { t:"I'm home", set:{ awayHrs:"1" } }, { t:"About 4 hrs", set:{ awayHrs:"4" } },
+           { t:"A work day", set:{ awayHrs:"7" } }, { t:"10+ hrs", set:{ awayHrs:"10" } } ] },
+  { id:"medical", need:h => !h.some(x => x.field === "medicalOK"),
+    q:"Could you give daily medication and get to recheck appointments?",
+    opts:[ { t:"Yes, I can", set:{ medicalOK:true } }, { t:"No, not that", set:{ medicalOK:false } } ] },
+  { id:"weeks", need:h => !h.some(x => x.field === "maxWeeks"),
+    q:"How long could you keep one? Some cases need a full ten weeks.",
+    opts:[ { t:"2 weeks", set:{ maxWeeks:"2" } }, { t:"6 weeks", set:{ maxWeeks:"6" } },
+           { t:"12 weeks", set:{ maxWeeks:"12" } }, { t:"As long as it takes", set:{ maxWeeks:"24" } } ] },
+  { id:"tier", need:h => !h.some(x => x.field === "tier"),
+    q:"How much fostering have you done before?",
+    opts:[ { t:"This is my first", set:{ tier:"1" } }, { t:"A few", set:{ tier:"2" } },
+           { t:"Plenty", set:{ tier:"3" } }, { t:"The hard ones", set:{ tier:"4" } } ] }
+];
+
+function clarifiers(hits){ return ASK_RULES.filter(r => r.need(hits)).slice(0, 3); }
+
+// Facts about an animal that only the notes can speak to.
+const isBonded     = a => /\bbonded\b/i.test(a.note);
+const isContagious = a => /ringworm|contagious|quarantine|upper respiratory/i.test((a.medical || "") + " " + a.note);
+const needsNoStairs= a => /stairs/i.test((a.medical || "") + " " + a.note);
+
+// Signal -> scoring effect, applied on top of the profile score.
+const AI_EFFECTS = {
+  senior:     (a,on) => on ? (a.age >= 7 ? [10,"You asked for a senior — " + a.name + " is " + a.age]
+                                         : a.age <= 1 ? [-10,"You asked for a senior; this one is a baby"] : null)
+                           : (a.age >= 7 ? [-8,"You'd rather skip seniors"] : null),
+  young:      (a,on) => on ? (a.age <= 1 ? [10,"You wanted a young one"] : a.age >= 7 ? [-8,"You wanted young; this one is a senior"] : null)
+                           : (a.age <= 1 ? [-12,"You said no puppies or kittens"] : [4,"Past the baby stage, as you asked"]),
+  calm:       (a,on) => on ? (a.energy === "low" ? [9,"Calm, the way you asked"] : a.energy === "high" ? [-13,"You wanted calm; this one is high energy"] : null) : null,
+  active:     (a,on) => on ? (a.energy === "high" ? [9,"Active, the way you asked"] : a.energy === "low" ? [-9,"You wanted active; this one is a napper"] : null) : null,
+  medical:    (a,on) => a.medical ? (on ? [9,"You're open to medical care, and this one needs it"]
+                                        : [-15,"You said no medical care, and this one needs it daily"]) : null,
+  stairs:     (a,on) => needsNoStairs(a) ? (on ? [-15,"Your home has stairs; this one can't use them"]
+                                               : [11,"Ground floor — exactly what this one needs"]) : null,
+  bonded:     (a,on) => isBonded(a) ? (on ? [9,"You're open to a pair, and these two come together"]
+                                          : [-13,"You want one at a time; these two can't be split"]) : null,
+  contagious: (a,on) => isContagious(a) ? (on ? [10,"You can isolate — this one needs it"]
+                                              : [-14,"Needs isolation, which you said you can't do"]) : null,
+  behavior:   (a,on) => a.tier >= 4 && !a.medical ? (on ? [10,"A behavior case, and you've done that work"]
+                                                        : [-13,"A behavior case, which you'd rather avoid"]) : null,
+  shortstay:  (a,on) => on ? (a.weeks <= 3 ? [8,"Short stay, as you wanted"] : a.weeks >= 8 ? [-11,"You wanted short; this is " + a.weeks + " weeks"] : null) : null,
+  longstay:   (a,on) => on ? (a.weeks >= 8 ? [9,"A long placement, which you can give"] : null) : null,
+  firsttime:  (a,on) => on ? (a.tier >= 3 ? [-13,"A hard case for a first foster"] : a.tier <= 1 ? [9,"A gentle first placement"] : null) : null,
+  homealot:   (a,on) => on ? (a.maxAloneHrs <= 5 ? [10,"Needs company, and you're home"] : null) : null,
+  small:      (a,on) => on ? (a.size === "small" ? [6,"Small, as you described your space"] : (a.size === "giant" || a.size === "large") ? [-10,"Bigger than the space you described"] : null) : null,
+  big:        (a,on) => on ? ((a.size === "large" || a.size === "giant") ? [9,"A big one, as you asked"] : a.size === "small" ? [-6,"Smaller than you had in mind"] : null) : null
+};
+
+const AI_CAP = 18;   // notes can move a score by at most this much, either way
+
+function aiFactors(animal, foster){
+  const sigs = foster.signals || [];
+  const out = [];
+  for(const s of sigs){
+    const fx = AI_EFFECTS[s.sig];
+    if(!fx) continue;
+    const r = fx(animal, s.on);
+    if(!r) continue;
+    // A hedged preference should not move the ranking as hard as an emphatic
+    // one, so confidence scales the effect instead of gating it.
+    const conf = s.conf === undefined ? .8 : s.conf;
+    const delta = Math.round(r[0] * (.6 + .4 * conf));
+    if(delta) out.push({ label:r[1], delta:delta, conf:conf });
+  }
+  return out;
+}
+
+/* ============================================================
+   MATCHING ENGINE
+
+   Two stages, deliberately kept separate:
+     1. GATES  — hard constraints. Any failure disqualifies, full stop.
+                 These are never traded off against a high score.
+     2. SCORE  — weighted soft fit, 0-100, decomposed into named
+                 factors so a coordinator can audit the ranking.
+   ============================================================ */
+
+const GATE_DEFS = [
+  {
+    key:"SPC", label:"Species",
+    applies:() => true,
+    test:(a,f) => f.species.includes(a.species),
+    fail:(a) => "Does not foster " + speciesWord(a.species) + "s"
+  },
+  {
+    key:"CAT", label:"Resident cats",
+    applies:(a,f) => f.residentCats,
+    test:(a) => a.catSafe,
+    fail:() => "Has resident cats — this animal is not cat-safe"
+  },
+  {
+    key:"DOG", label:"Resident dogs",
+    applies:(a,f) => f.residentDogs,
+    test:(a) => a.dogSafe,
+    fail:() => "Has resident dogs — this animal is not dog-safe"
+  },
+  {
+    key:"KID", label:"Kids at home",
+    applies:(a,f) => f.kidsAtHome,
+    test:(a) => a.kidSafe,
+    fail:() => "Kids at home — this animal is not cleared for children"
+  },
+  {
+    key:"YRD", label:"Yard",
+    applies:(a) => a.needsYard,
+    test:(a,f) => f.yard,
+    fail:() => "No fenced yard, and this animal needs one"
+  },
+  {
+    key:"DUR", label:"Duration",
+    applies:() => true,
+    test:(a,f) => f.maxWeeks >= a.weeks,
+    fail:(a,f) => "Takes " + f.maxWeeks + " weeks max, placement needs " + a.weeks
+  },
+  {
+    key:"MED", label:"Medical",
+    applies:(a) => !!a.medical,
+    test:(a,f) => f.medicalOK,
+    fail:() => "Not set up for medical care"
+  },
+  {
+    key:"HRS", label:"Hours alone",
+    applies:() => true,
+    test:(a,f) => f.awayHrs <= a.maxAloneHrs,
+    fail:(a,f) => "Away " + f.awayHrs + " hrs/day, animal tolerates " + a.maxAloneHrs
+  },
+  {
+    key:"CAP", label:"Capacity",
+    applies:() => true,
+    test:(a,f) => f.current < f.capacity,
+    fail:(a,f) => "At capacity (" + f.current + " of " + f.capacity + ")"
+  }
+];
+
+function speciesWord(s){ return s === "small" ? "small animal" : s; }
+
+function runGates(animal, foster){
+  return GATE_DEFS.map(g => {
+    if(!g.applies(animal, foster)) return { key:g.key, state:"na" };
+    const ok = g.test(animal, foster);
+    return ok
+      ? { key:g.key, state:"pass" }
+      : { key:g.key, state:"fail", reason:g.fail(animal, foster) };
+  });
+}
+
+// Soft factors. Each returns {label, delta} or null. Deltas are points
+// against a 60-point baseline; the total is clamped to 0-100.
+const FACTORS = [
+  function experience(a,f){
+    const gap = f.tier - a.tier;
+    if(gap >= 2) return { label:"Well beyond the experience this case needs", delta:8 };
+    if(gap === 1) return { label:"Experience clears the bar comfortably", delta:12 };
+    if(gap === 0) return { label:"Experience matches the case exactly", delta:14 };
+    if(gap === -1) return { label:"A step up from their usual cases", delta:-14 };
+    return { label:"Well below the experience this case needs", delta:-26 };
+  },
+  function supervision(a,f){
+    const slack = a.maxAloneHrs - f.awayHrs;
+    if(f.awayHrs <= 2 && a.maxAloneHrs <= 5) return { label:"Home nearly all day — this animal needs that", delta:13 };
+    if(slack >= 5) return { label:"Home far more than this animal requires", delta:6 };
+    if(slack <= 1) return { label:"Alone-time clears by only " + slack + " hr", delta:-8 };
+    return null;
+  },
+  function duration(a,f){
+    const head = f.maxWeeks - a.weeks;
+    if(head >= 6) return { label:"Long runway if the stay extends", delta:7 };
+    if(head <= 1) return { label:"No slack if the stay runs long", delta:-9 };
+    return null;
+  },
+  function size(a,f){
+    if(f.sizes.includes(a.size)) return { label:"Takes " + a.size + " animals", delta:6 };
+    return { label:"Outside their usual size range (" + a.size + ")", delta:-15 };
+  },
+  function energy(a,f){
+    if(f.energyPref === "any") return null;
+    if(f.energyPref === a.energy) return { label:"Energy level is what they prefer", delta:7 };
+    const far = (f.energyPref === "low" && a.energy === "high") || (f.energyPref === "high" && a.energy === "low");
+    return { label:"Prefers " + f.energyPref + "-energy animals", delta: far ? -12 : -5 };
+  },
+  function track(a,f){
+    const n = f.prior[a.species] || 0;
+    if(n >= 15) return { label:n + " prior " + speciesWord(a.species) + " placements", delta:10 };
+    if(n >= 5) return { label:n + " prior " + speciesWord(a.species) + " placements", delta:6 };
+    if(n === 0) return { label:"Has not fostered a " + speciesWord(a.species) + " before", delta:-7 };
+    return null;
+  },
+  function medicalDepth(a,f){
+    if(!a.medical) return null;
+    if(f.tier >= 4) return { label:"Handles medical cases routinely", delta:9 };
+    return null;
+  },
+  function distance(a,f){
+    if(f.miles <= 5) return { label:f.miles + " mi out — easy transport", delta:5 };
+    if(f.miles >= 15) return { label:f.miles + " mi out — transport to arrange", delta:-6 };
+    return null;
+  },
+  function load(a,f){
+    if(f.placements90 >= 4) return { label:f.placements90 + " placements in 90 days — watch for burnout", delta:-11 };
+    if(f.placements90 === 0) return { label:"Rested — no placements in 90 days", delta:4 };
+    return null;
+  }
+];
+
+// Bounds of the factor set above, used to normalize the raw total onto 0-100.
+// Keep these in step with the deltas the factors can return.
+const RAW_MAX =  75;   // 14+13+7+6+7+10+9+5+4
+const RAW_MIN = -94;   // -26-8-9-15-12-7-0-6-11
+
+function evaluate(animal, foster){
+  const gates = runGates(animal, foster);
+  const blockers = gates.filter(g => g.state === "fail");
+
+  const factors = [];
+  let raw = 0;
+  for(const fn of FACTORS){
+    const r = fn(animal, foster);
+    if(r){ factors.push(r); raw += r.delta; }
+  }
+  // Normalize against the range the factor set can actually produce, rather
+  // than clamping a running total — clamping piles good matches onto 100 and
+  // hides the differences between them, which is exactly where the choice is.
+  const base = Math.max(0, Math.min(100, Math.round(100 * (raw - RAW_MIN) / (RAW_MAX - RAW_MIN))));
+  factors.sort((x,y) => Math.abs(y.delta) - Math.abs(x.delta));
+
+  // Notes adjust the profile score rather than folding into it, so the
+  // written preferences stay legible as their own contribution.
+  const ai = aiFactors(animal, foster);
+  ai.sort((x,y) => Math.abs(y.delta) - Math.abs(x.delta));
+  const aiRaw = ai.reduce((n,f) => n + f.delta, 0);
+  const aiAdjust = Math.max(-AI_CAP, Math.min(AI_CAP, aiRaw));
+  const score = Math.max(0, Math.min(100, base + aiAdjust));
+
+  const band = blockers.length ? "blocked"
+    : score >= 72 ? "strong"
+    : score >= 55 ? "workable"
+    : "stretch";
+
+  return { foster, gates, blockers, factors, raw, base, ai, aiAdjust, score, band, eligible: blockers.length === 0 };
+}
+
+function rank(animal){
+  return FOSTERS
+    .map(f => evaluate(animal, f))
+    .sort((a,b) => {
+      if(a.eligible !== b.eligible) return a.eligible ? -1 : 1;
+      if(!a.eligible) return a.blockers.length - b.blockers.length;
+      return b.score - a.score;
+    });
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+
+const STORE_KEY = "fostermatch.v1";
+
+let state = {
+  view: "foster",
+  me: null,       // the foster profile submitted through the intake form
+  selected: ANIMALS[0].id,
+  filter: "all",
+  placed: {},   // animalId -> fosterId
+  offers: [],   // {id, animalId, fosterId, status, at, reason}
+  drawer: false
+};
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) state = Object.assign(state, JSON.parse(raw), { drawer:false });
+  }catch(e){ /* storage unavailable — run in memory */ }
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ /* storage unavailable — run in memory */ }
+}
+
+// Fosters carry live load, derived from accepted placements.
+function syncLoad(){
+  FOSTERS.forEach(f => { f.current = f.baseCurrent === undefined ? f.current : f.baseCurrent; });
+  Object.values(state.placed).forEach(fid => {
+    const f = FOSTERS.find(x => x.id === fid);
+    if(f) f.current += 1;
+  });
+}
+FOSTERS.forEach(f => { f.baseCurrent = f.current; });
+
+const waiting = () => ANIMALS.filter(a => !state.placed[a.id]);
+const animalById = id => ANIMALS.find(a => a.id === id);
+const fosterById = id => FOSTERS.find(f => f.id === id);
+const offerFor = animalId => state.offers.find(o => o.animalId === animalId && o.status === "sent");
+
+function urgency(a){
+  if(a.deadlineDays <= 2) return "urgent";
+  if(a.deadlineDays <= 7) return "soon";
+  return "open";
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+function visibleAnimals(){
+  let list = waiting();
+  const f = state.filter;
+  if(f === "urgent") list = list.filter(a => urgency(a) === "urgent");
+  else if(f === "stuck") list = list.filter(a => rank(a).every(m => !m.eligible));
+  else if(f !== "all") list = list.filter(a => a.species === f);
+  return list.sort((a,b) => a.deadlineDays - b.deadlineDays);
+}
+
+function renderStats(){
+  const w = waiting();
+  const stuck = w.filter(a => rank(a).every(m => !m.eligible));
+  const pending = state.offers.filter(o => o.status === "sent").length;
+  const placed = Object.keys(state.placed).length;
+
+  let html = "";
+  html += '<div class="stat"><b>' + w.length + '</b><span class="lbl">Waiting</span></div>';
+  if(stuck.length){
+    html += '<button class="stat is-alarm" id="stuckBtn"><b>' + stuck.length +
+            '</b><span class="lbl">No eligible foster</span></button>';
+  }
+  html += '<div class="stat"><b>' + placed + '</b><span class="lbl">Placed</span></div>';
+  html += '<button class="stat is-btn" id="offersBtn"><b>' + pending +
+          '</b><span class="lbl">Offers out</span></button>';
+  html += '<button class="stat is-btn" id="resetBtn"><span class="lbl">Reset board</span></button>';
+  $("stats").innerHTML = html;
+
+  const sb = $("stuckBtn");
+  if(sb) sb.onclick = () => setFilter("stuck");
+  $("offersBtn").onclick = () => toggleDrawer(true);
+  $("resetBtn").onclick = reset;
+}
+
+function renderCards(){
+  const list = visibleAnimals();
+  $("rosterCount").textContent = list.length + (list.length === 1 ? " card" : " cards");
+
+  if(!list.length){
+    $("cards").innerHTML = '<div class="empty"><b>Nothing on this filter</b>' +
+      (state.filter === "stuck"
+        ? "Every waiting animal has at least one eligible foster."
+        : "Try a different filter to see the rest of the board.") + '</div>';
+    return;
+  }
+
+  $("cards").innerHTML = list.map(a => {
+    const u = urgency(a);
+    const tapeText = u === "urgent" ? a.deadlineDays + "d left" : a.deadlineDays + " days";
+    const matches = rank(a);
+    const elig = matches.filter(m => m.eligible).length;
+    const best = matches[0] && matches[0].eligible ? matches[0].score : null;
+    const pend = offerFor(a.id);
+
+    const tags = [];
+    if(a.medical) tags.push({ t:"Medical", need:true });
+    if(!a.catSafe) tags.push({ t:"No cats", need:true });
+    if(!a.dogSafe) tags.push({ t:"No dogs", need:true });
+    if(!a.kidSafe) tags.push({ t:"No kids", need:true });
+    if(a.needsYard) tags.push({ t:"Yard", need:false });
+    tags.push({ t:a.weeks + " wk", need:false });
+
+    return '<button class="kcard u-' + u + '" data-id="' + a.id + '" aria-pressed="' + (state.selected === a.id) + '">' +
+      '<div class="k-top">' + dioSm(a, 42) +
+        '<span style="flex:1;min-width:0"><span class="k-name">' + esc(a.name) + '</span>' +
+        '<span class="k-meta">' + esc(a.breed) + ' · ' +
+          (a.age === 0 ? "under 1 yr" : a.age + " yr") + ' · ' + a.size + '</span></span>' +
+        '<span class="k-days u-' + u + '">' + esc(tapeText) + '</span></div>' +
+      '<div class="k-tags">' + tags.map(t =>
+        '<span class="k-tag' + (t.need ? " is-need" : "") + '">' + esc(t.t) + '</span>').join("") + '</div>' +
+      '<div class="k-foot">' +
+        '<span class="k-eligible' + (elig ? "" : " is-zero") + '">' +
+          (elig ? elig + " eligible · best " + best : "No eligible foster") + '</span>' +
+        (pend ? '<span style="color:#9A5F06">Offer out</span>' : '<span class="k-id">' + a.id + '</span>') +
+      '</div>' +
+    '</button>';
+  }).join("");
+
+  Array.prototype.forEach.call(document.querySelectorAll(".kcard"), el => {
+    el.onclick = () => { state.selected = el.dataset.id; save(); render(); };
+  });
+  bindTilt($("cards"));
+}
+
+/* ---------- recruitment advice ----------
+   When nothing on the roster clears, "no matches" is useless on its own. The
+   useful output is which constraint is doing the blocking and who is closest
+   to clearing it, both of which fall straight out of the gate results. */
+
+const RECRUIT_ASK = {
+  SPC:a => "fosters who take " + speciesWord(a.species) + "s",
+  CAT:() => "homes with no resident cat",
+  DOG:() => "homes with no resident dog",
+  KID:() => "adults-only homes",
+  YRD:() => "homes with a securely fenced yard",
+  DUR:a => "someone who can commit the full " + a.weeks + " weeks",
+  MED:() => "fosters cleared for daily medication",
+  HRS:a => "someone home within " + a.maxAloneHrs + " hours a day",
+  CAP:() => "capacity — everyone able to take this one is already full"
+};
+
+function recruitHTML(a, matches){
+  const tally = {};
+  matches.forEach(m => m.blockers.forEach(b => { tally[b.key] = (tally[b.key] || 0) + 1; }));
+  const keys = Object.keys(tally).sort((x, y) => tally[y] - tally[x]);
+  const top = keys[0];
+  const label = top ? GATE_DEFS.find(g => g.key === top).label : "";
+  const near = matches.filter(m => m.blockers.length === 1);
+
+  let lines = "";
+  if(top) lines += '<div class="rec-line"><i>' + top + '</i><span><b>' + esc(label) + '</b> is the binding constraint — ' +
+    'it rules out ' + tally[top] + ' of ' + matches.length + ' fosters on the roster.</span></div>';
+
+  if(near.length){
+    const n = near.slice(0, 2).map(m => esc(m.foster.name) + " (" + lower1(m.blockers[0].reason) + ")").join("; ");
+    lines += '<div class="rec-line"><i>NEAR</i><span>' + near.length + ' foster' + (near.length === 1 ? " is" : "s are") +
+      ' one constraint away: ' + n + '.</span></div>';
+  }
+
+  if(top) lines += '<div class="rec-line"><i>ASK</i><span>Recruit ' + esc(RECRUIT_ASK[top](a)) + '.</span></div>';
+
+  lines += '<div class="rec-line"><i>ELSE</i><span>Or reassess whether a constraint on ' + esc(a.name) +
+    ' can safely change — a shorter stay or a lifted restriction reopens the board.</span></div>';
+
+  return '<div class="ai-panel recruit"><div class="ai-head">' +
+    '<span class="ai-mark"><svg viewBox="0 0 24 24"><path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z" fill="#EAFBF6"/></svg></span>' +
+    '<span style="flex:1;min-width:160px"><span class="ai-title" style="display:block">No foster can take ' + esc(a.name) + '</span>' +
+    '<span class="ai-sub">AI recruitment advice · where to look next</span></span>' +
+    '<span class="ai-badge on-dark"><span class="beat"></span>AI matching</span></div>' +
+    '<div class="ai-body">' + lines + '</div></div>';
+}
+
+function renderLedger(){
+  const a = animalById(state.selected);
+
+  if(!a || state.placed[a.id]){
+    const next = visibleAnimals()[0] || waiting()[0];
+    if(next){ state.selected = next.id; return renderLedger(); }
+    $("ledger").innerHTML = '<div class="empty"><b>The board is clear</b>' +
+      'Every animal has a foster. Reset the board to run the demo again.</div>';
+    return;
+  }
+
+  const matches = rank(a);
+  const eligible = matches.filter(m => m.eligible);
+  const blocked = matches.filter(m => !m.eligible);
+  const pend = offerFor(a.id);
+
+  const needs = [];
+  if(!a.catSafe) needs.push({ t:"Not cat-safe", hard:true });
+  if(!a.dogSafe) needs.push({ t:"Not dog-safe", hard:true });
+  if(!a.kidSafe) needs.push({ t:"Adults only", hard:true });
+  if(a.needsYard) needs.push({ t:"Fenced yard", hard:true });
+  if(a.medical) needs.push({ t:a.medical, hard:true });
+  needs.push({ t:"Max " + a.maxAloneHrs + " hrs alone", hard:false });
+  needs.push({ t:a.weeks + "-week stay", hard:false });
+  needs.push({ t:"Tier " + a.tier + " experience", hard:false });
+
+  let html = "";
+
+  html += '<div class="sel">' +
+    '<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">' +
+    '<span class="dio" style="width:104px;height:132px" data-tilt><span class="dio-inner">' +
+      '<span class="dio-wash"></span><span class="dio-art">' + portrait(a) + photoImg(a, true) + '</span>' +
+      '<span class="dio-frame"></span></span></span>' +
+    '<div style="flex:1;min-width:200px">' +
+    '<div class="sel-name">' + esc(a.name) + '</div>' +
+    '<div class="sel-line">' + a.id + ' · ' + esc(a.breed) + ' · ' + speciesWord(a.species) +
+      ' · placement needed in ' + a.deadlineDays + ' day' + (a.deadlineDays === 1 ? "" : "s") + '</div>' +
+    '<p class="sel-note">' + esc(a.note) + '</p>' +
+    '<div class="sel-needs">' + needs.map(n =>
+      '<span class="need' + (n.hard ? " is-hard" : "") + '">' + esc(n.t) + '</span>').join("") + '</div>' +
+    '<div class="acts"><button class="btn" data-pet="' + a.id + '">View full profile</button></div>' +
+    '</div></div>' +
+  '</div>';
+
+  if(pend){
+    const pf = fosterById(pend.fosterId);
+    html += '<div class="sel" style="margin-bottom:18px;border-color:rgba(224,145,43,.45)">' +
+      '<div class="pending"><span class="dot"></span>Offer sent to ' + esc(pf.name) + ' — waiting on a reply</div>' +
+      '<div class="acts"><button class="btn is-sm" data-withdraw="' + pend.id + '">Withdraw offer</button></div>' +
+    '</div>';
+  }
+
+  html += "<!--RECRUIT-->";
+
+  html += '<div class="col-head" style="margin-top:26px"><span class="lbl">Ranked fosters</span>' +
+    '<span class="lbl">' + eligible.length + ' eligible · ' + blocked.length + ' blocked</span></div>';
+
+  if(!eligible.length) html = html.replace("<!--RECRUIT-->", recruitHTML(a, matches));
+
+  html += '<div class="rows">' + matches.map(m => rowHTML(m, a)).join("") + '</div>';
+
+  $("ledger").innerHTML = html;
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-toggle]"), el => {
+    el.onclick = () => {
+      const why = document.querySelector('[data-why="' + el.dataset.toggle + '"]');
+      const open = !why.hidden;
+      why.hidden = open;
+      el.setAttribute("aria-expanded", String(!open));
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-offer]"), el => {
+    el.onclick = e => { e.stopPropagation(); sendOffer(a.id, el.dataset.offer); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-withdraw]"), el => {
+    el.onclick = () => withdraw(el.dataset.withdraw);
+  });
+  bindTilt($("ledger"));
+  bindPetOpeners();
+}
+
+function rowHTML(m, animal){
+  const f = m.foster;
+  const rid = animal.id + "-" + f.id;
+  const bandClass = m.eligible ? ("s-" + (m.band === "strong" ? "strong" : m.band === "workable" ? "work" : "stretch")) : "s-blocked";
+  const bandLabel = m.eligible ? m.band : m.blockers.length + " blocker" + (m.blockers.length === 1 ? "" : "s");
+  const pend = offerFor(animal.id);
+
+  let html = '<div class="row ' + (m.eligible ? "" : "is-blocked") + '">';
+
+  html += '<button class="row-main" data-toggle="' + rid + '" aria-expanded="false">' +
+    '<span class="row-id"><span class="row-name">' + esc(f.name) + '</span>' +
+    '<span class="row-where">' + esc(f.area) + ' · ' + f.miles + ' mi · tier ' + f.tier + '</span></span>' +
+    '<span class="row-right ' + bandClass + '">' +
+      (m.eligible ? '<span class="meter"><i style="width:' + m.score + '%"></i></span>' : '') +
+      '<span class="score"><b>' + (m.eligible ? m.score : "—") + '</b>' +
+      '<span class="band">' + esc(bandLabel) + '</span></span>' +
+    '</span></button>';
+
+  // signature: the gate strip
+  html += '<div class="gates">' + m.gates.map(g =>
+    '<span class="gate g-' + g.state + '" title="' + esc(g.reason || GATE_DEFS.find(d => d.key === g.key).label) + '">' +
+    g.key + '</span>').join("") + '</div>';
+
+  html += '<div class="why" data-why="' + rid + '" hidden>';
+
+  if(m.blockers.length){
+    html += '<div class="lbl why-h">Blocked by</div><div class="factors">' +
+      m.blockers.map(b => '<div class="factor f-block"><span>' + esc(b.reason) + '</span><em>' + b.key + '</em></div>').join("") +
+    '</div>';
+  }
+
+  html += '<div class="lbl why-h">' + (m.eligible ? "How this scored " + m.score : "Fit, if the blocker cleared") + '</div>' +
+    '<div class="factors">' +
+      m.factors.map(fa =>
+        '<div class="factor ' + (fa.delta > 0 ? "f-pos" : "f-neg") + '"><span>' + esc(fa.label) + '</span>' +
+        '<em>' + (fa.delta > 0 ? "+" : "") + fa.delta + '</em></div>').join("") +
+      '<div class="factor f-net"><span>Net ' + (m.raw > 0 ? "+" : "") + m.raw +
+        ' of a possible +' + RAW_MAX + ', scaled to 0–100</span><em>' + m.base + '</em></div>' +
+    '</div>';
+
+  if(m.ai && m.ai.length){
+    html += '<div class="lbl why-h" style="color:var(--ok)">From the notes · AI matching</div>' +
+      '<div class="factors">' +
+        m.ai.map(fa =>
+          '<div class="factor ' + (fa.delta > 0 ? "f-pos" : "f-neg") + '"><span>' + esc(fa.label) + '</span>' +
+          '<em>' + (fa.delta > 0 ? "+" : "") + fa.delta + '</em></div>').join("") +
+        '<div class="factor f-net"><span>Notes adjustment, capped at ' + AI_CAP +
+          '</span><em>' + (m.aiAdjust > 0 ? "+" : "") + m.aiAdjust + ' → ' + m.score + '</em></div>' +
+      '</div>';
+  }
+
+  html += '<p style="font-size:12.5px;color:var(--mute);margin:12px 0 0;line-height:1.5">' + esc(f.wants) + '</p>';
+
+  html += '<div class="acts">';
+  if(m.eligible && !pend){
+    html += '<button class="btn is-primary" data-offer="' + f.id + '">Offer placement</button>';
+  }else if(m.eligible && pend){
+    html += '<button class="btn" disabled>Offer already out</button>';
+  }else{
+    html += '<button class="btn" disabled>Blocked — cannot offer</button>';
+  }
+  html += '</div></div></div>';
+
+  return html;
+}
+
+function renderOffers(){
+  if(!state.offers.length){
+    $("offers").innerHTML = '<div class="empty"><b>No offers yet</b>Pick an animal, then offer a placement to a ranked foster.</div>';
+    return;
+  }
+  $("offers").innerHTML = state.offers.slice().reverse().map(o => {
+    const a = animalById(o.animalId), f = fosterById(o.fosterId);
+    let line, meta;
+    if(o.status === "sent"){
+      line = 'Offered <b>' + esc(a.name) + '</b> to <b>' + esc(f.name) + '</b>.';
+      meta = "Waiting on a reply";
+    }else if(o.status === "accepted"){
+      line = '<b>' + esc(f.name) + '</b> accepted <b>' + esc(a.name) + '</b>.';
+      meta = "Placed · pickup to schedule";
+    }else if(o.status === "withdrawn"){
+      line = 'Withdrew the offer for <b>' + esc(a.name) + '</b> to <b>' + esc(f.name) + '</b>.';
+      meta = "Withdrawn";
+    }else{
+      line = '<b>' + esc(f.name) + '</b> declined <b>' + esc(a.name) + '</b>.';
+      meta = esc(o.reason || "Declined");
+    }
+    return '<div class="offer o-' + o.status + '"><div class="offer-t">' + line + '</div>' +
+      '<div class="offer-m">' + meta + ' · ' + o.at + '</div></div>';
+  }).join("");
+}
+
+function render(){
+  syncLoad();
+  renderHero();
+  renderStats();
+  renderCards();
+  renderLedger();
+  renderOffers();
+  renderResults();
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+
+const DECLINE_REASONS = [
+  "Traveling that week",
+  "Wants to wait for a shorter stay",
+  "Resident pet recovering from surgery",
+  "Already committed to another rescue",
+  "Not comfortable with the medical routine"
+];
+
+const clock = () => new Date().toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+
+function sendOffer(animalId, fosterId){
+  const id = "O" + Date.now();
+  const f = fosterById(fosterId), a = animalById(animalId);
+  state.offers.push({ id, animalId, fosterId, status:"sent", at:clock() });
+  save(); render();
+  toast("Offer sent to " + f.name + " for " + a.name + ".", "Undo", () => withdraw(id, true));
+
+  // Simulated reply. Higher-scoring matches accept more often.
+  const m = evaluate(a, f);
+  const chance = Math.min(0.94, 0.3 + m.score / 130);
+  setTimeout(() => {
+    const o = state.offers.find(x => x.id === id);
+    if(!o || o.status !== "sent") return;
+    if(Math.random() < chance){
+      o.status = "accepted"; o.at = clock();
+      state.placed[animalId] = fosterId;
+      save(); render();
+      toast(f.name + " accepted " + a.name + ".");
+    }else{
+      o.status = "declined"; o.at = clock();
+      o.reason = DECLINE_REASONS[Math.floor(Math.random() * DECLINE_REASONS.length)];
+      save(); render();
+      toast(f.name + " declined — " + o.reason.toLowerCase() + ".", "See offers", () => toggleDrawer(true));
+    }
+  }, 2600 + Math.random() * 3600);
+}
+
+function withdraw(id, silent){
+  const o = state.offers.find(x => x.id === id);
+  if(!o || o.status !== "sent") return;
+  if(silent){
+    state.offers = state.offers.filter(x => x.id !== id);
+  }else{
+    o.status = "withdrawn"; o.at = clock();
+  }
+  save(); render();
+  if(!silent) toast("Offer withdrawn.");
+  else hideToast();
+}
+
+function setFilter(f){
+  state.filter = f;
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"), c =>
+    c.setAttribute("aria-pressed", String(c.dataset.f === f)));
+  save(); render();
+}
+
+function reset(){
+  state.placed = {}; state.offers = []; state.filter = "all";
+  state.selected = ANIMALS[0].id;
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"), c =>
+    c.setAttribute("aria-pressed", String(c.dataset.f === "all")));
+  save(); render();
+  toast("Board reset.");
+}
+
+function toggleDrawer(open){
+  state.drawer = open;
+  $("drawer").classList.toggle("is-open", open);
+  $("drawer").setAttribute("aria-hidden", String(!open));
+  $("scrim").classList.toggle("is-open", open);
+  if(open) $("drawerClose").focus();
+}
+
+let toastTimer;
+function toast(msg, actionLabel, fn){
+  clearTimeout(toastTimer);
+  $("toastMsg").textContent = msg;
+  const b = $("toastAct");
+  if(actionLabel){
+    b.hidden = false; b.textContent = actionLabel;
+    b.onclick = () => { fn(); hideToast(); };
+  }else{ b.hidden = true; b.onclick = null; }
+  $("toast").classList.add("is-open");
+  toastTimer = setTimeout(hideToast, actionLabel ? 6500 : 3600);
+}
+function hideToast(){ clearTimeout(toastTimer); $("toast").classList.remove("is-open"); }
+
+/* ============================================================
+   FOSTER INTAKE + AI MATCHING
+   ============================================================ */
+
+const ageText = a => a.age === 0 ? "under 1 yr" : a.age + " yr";
+const clip = (s,n) => s.length > n ? s.slice(0, n).replace(/\s+\S*$/, "") + "…" : s;
+const lower1 = s => s.charAt(0).toLowerCase() + s.slice(1);
+
+// Same engine, run the other way: one foster against every waiting animal.
+function matchAnimals(foster){
+  return waiting()
+    .map(a => { const m = evaluate(a, foster); m.animal = a; return m; })
+    .sort((x,y) => {
+      if(x.eligible !== y.eligible) return x.eligible ? -1 : 1;
+      if(!x.eligible) return x.blockers.length - y.blockers.length;
+      return y.score - x.score;
+    });
+}
+
+function readForm(){
+  const d = new FormData($("fosterForm"));
+  const many = n => d.getAll(n).map(String);
+  const on = n => d.get(n) !== null;
+  const notes = String($("talkArea").value || "");
+  return {
+    id:"F-ME",
+    name:(String(d.get("name") || "").trim() || "You"),
+    area:(String(d.get("area") || "").trim() || "your area"),
+    miles:+d.get("miles"),
+    species:many("species"), sizes:many("sizes"),
+    residentCats:on("residentCats"), residentDogs:on("residentDogs"),
+    kidsAtHome:on("kidsAtHome"), yard:on("yard"),
+    maxWeeks:+d.get("maxWeeks"), awayHrs:+d.get("awayHrs"),
+    medicalOK:on("medicalOK"), tier:+d.get("tier"),
+    capacity:+d.get("capacity"), current:0,
+    energyPref:String(d.get("energyPref")),
+    placements90:0, prior:{ dog:0, cat:0, small:0 },
+    wants:notes.trim() || "No additional notes.",
+    notes:notes,
+    signals:readNotes(notes)
+  };
+}
+
+/* ---------- filling the form from prose ----------
+   Staggered rather than instant: watching each control land is what makes
+   the extraction legible, and it shows exactly which answers came from the
+   description so a wrong one is easy to spot and correct. */
+
+function setControl(name, value, type){
+  const f = $("fosterForm");
+  const nodes = f.querySelectorAll('[name="' + name + '"]');
+  if(!nodes.length) return null;
+
+  if(type === "check"){
+    nodes[0].checked = !!value;
+    const wrap = nodes[0].closest(".check");
+    if(wrap){ wrap.classList.add("is-lit"); setTimeout(() => wrap.classList.remove("is-lit"), 950); }
+    return nodes[0];
+  }
+  if(type === "multi"){
+    Array.prototype.forEach.call(nodes, el => {
+      el.checked = value.indexOf(el.value) > -1;
+      const wrap = el.closest(".check");
+      if(wrap && el.checked){ wrap.classList.add("is-lit"); setTimeout(() => wrap.classList.remove("is-lit"), 950); }
+    });
+    return nodes[0];
+  }
+  nodes[0].value = value;
+  nodes[0].classList.add("is-lit");
+  setTimeout(() => nodes[0].classList.remove("is-lit"), 950);
+  return nodes[0];
+}
+
+function applyExtraction(hits, stagger){
+  hits.forEach((h, i) => {
+    const go = () => {
+      const el = setControl(h.field, h.value, h.type);
+      if(!el) return;
+      const fs = el.closest(".fieldset");
+      if(fs){ fs.classList.add("is-lit"); setTimeout(() => fs.classList.remove("is-lit"), 900); }
+    };
+    stagger ? setTimeout(go, 120 + i * 130) : go();
+  });
+}
+
+/* ---------- what it heard ---------- */
+
+/* Several signals restate a constraint the extractor already pulled into a
+   form control. Showing both reads as the matcher repeating itself, so the
+   soft signal is dropped from the chips whenever its field was filled — it
+   still contributes to the score either way. */
+const SIG_COVERED_BY = {
+  calm:"energyPref", active:"energyPref", medical:"medicalOK",
+  small:"sizes", big:"sizes", firsttime:"tier",
+  shortstay:"maxWeeks", longstay:"maxWeeks", homealot:"awayHrs"
+};
+
+function renderAI(signals, hits){
+  const chips = [];
+  const filled = (hits || []).map(h => h.field);
+  (hits || []).forEach(h => chips.push({ txt:h.say, neg:false, conf:null }));
+  (signals || []).forEach(s => {
+    const covers = SIG_COVERED_BY[s.sig];
+    if(covers && filled.indexOf(covers) > -1) return;
+    chips.push({ txt:s.label, neg:!s.on, conf:s.conf });
+  });
+
+  const none = $("aiNone");
+  if(!chips.length){
+    $("aiChips").innerHTML = "";
+    none.hidden = false;
+    none.textContent = "Nothing to go on yet. Write a line or two about your place, your schedule, and what you're hoping for.";
+    return;
+  }
+  none.hidden = true;
+  $("aiChips").innerHTML = chips.map((c, i) =>
+    '<span class="ai-chip' + (c.neg ? " is-neg" : "") + '" style="animation-delay:' + (i * 45) + 'ms">' +
+      esc(c.txt) +
+      (c.conf !== null && c.conf !== undefined ? '<i class="ai-conf">' + Math.round(c.conf * 100) + '%</i>' : "") +
+    '</span>').join("");
+}
+
+function renderAsks(hits){
+  const asks = clarifiers(hits);
+  const box = $("asks");
+  if(!asks.length){ box.innerHTML = ""; return; }
+  box.innerHTML = asks.map((r, i) =>
+    '<div class="ask" style="animation-delay:' + (i * 70) + 'ms">' +
+      '<div class="ask-q">' + esc(r.q) + '</div>' +
+      '<div class="ask-opts">' + r.opts.map((o, j) =>
+        '<button type="button" class="ask-opt" data-ask="' + r.id + '" data-opt="' + j + '" aria-pressed="false">' +
+        esc(o.t) + '</button>').join("") + '</div>' +
+    '</div>').join("");
+
+  Array.prototype.forEach.call(box.querySelectorAll(".ask-opt"), el => {
+    el.onclick = () => {
+      const rule = ASK_RULES.find(r => r.id === el.dataset.ask);
+      const opt = rule.opts[+el.dataset.opt];
+      Array.prototype.forEach.call(
+        box.querySelectorAll('[data-ask="' + rule.id + '"]'),
+        s => s.setAttribute("aria-pressed", String(s === el)));
+      Object.keys(opt.set).forEach(k => {
+        const v = opt.set[k];
+        setControl(k, v, Array.isArray(v) ? "multi" : typeof v === "boolean" ? "check" : "value");
+      });
+      const fs = $("fosterForm").querySelector('[name="' + Object.keys(opt.set)[0] + '"]');
+      const wrap = fs && fs.closest(".fieldset");
+      if(wrap){ wrap.classList.add("is-lit"); setTimeout(() => wrap.classList.remove("is-lit"), 900); }
+    };
+  });
+}
+
+/* ---------- live reasoning stream ----------
+   The engine already produces every one of these lines internally. Showing
+   them as they resolve is the honest version of an AI "thinking" state: it
+   is the actual gate and factor evaluation, paced so it can be read. */
+
+let streamTimer = null;
+
+function buildSteps(me){
+  const S = [];
+  const push = (txt, cls, meta, mark) => S.push({ txt, cls:cls || "", meta:meta || "", mark:mark || "·" });
+
+  push("Reading your description", "is-head");
+  const hits = extractForm(me.notes);
+  if(hits.length) hits.forEach(h => push(h.say, "is-hit", h.label, "✓"));
+  else push("No structured constraints found — using the form as filled", "", "", "·");
+
+  if((me.signals || []).length){
+    push("Preferences in how you said it", "is-head");
+    me.signals.forEach(s =>
+      push(s.label, s.on ? "is-hit" : "", Math.round(s.conf * 100) + "% conf", s.on ? "+" : "−"));
+  }
+
+  const all = waiting();
+  push("Screening " + all.length + " animals · " + GATE_DEFS.length + " hard constraints", "is-head");
+  const ms = matchAnimals(me);
+  ms.slice().sort((a,b) => a.animal.deadlineDays - b.animal.deadlineDays).forEach(m => {
+    if(m.eligible) push(m.animal.name + " clears every gate", "is-hit", m.animal.id, "✓");
+    else push(m.animal.name + " — " + lower1(m.blockers[0].reason), "is-cut", m.blockers[0].key, "✕");
+  });
+
+  const el = ms.filter(m => m.eligible);
+  if(el.length){
+    push("Ranking " + el.length + " eligible", "is-head");
+    el.slice(0, 6).forEach(m =>
+      push(m.animal.name + " · " + m.band, "", m.score + (m.aiAdjust ? " (notes " + (m.aiAdjust > 0 ? "+" : "") + m.aiAdjust + ")" : ""), "→"));
+  }
+  return S;
+}
+
+function runStream(me, done){
+  const box = $("stream");
+  clearTimeout(streamTimer);
+  box.hidden = false;
+  box.innerHTML = "";
+  const steps = buildSteps(me);
+  const reduce = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  if(reduce){
+    box.innerHTML = steps.map(s =>
+      '<div class="st-line ' + s.cls + '"><i>' + esc(s.mark) + '</i><span>' + esc(s.txt) + '</span><em>' + esc(s.meta) + '</em></div>').join("");
+    done();
+    return;
+  }
+
+  let i = 0;
+  const tick = () => {
+    if(i >= steps.length){
+      box.insertAdjacentHTML("beforeend",
+        '<div class="st-line is-hit"><i>✓</i><span>Ranked. Scroll for your matches.</span><em></em></div>');
+      box.scrollTop = box.scrollHeight;
+      done();
+      return;
+    }
+    const s = steps[i++];
+    box.insertAdjacentHTML("beforeend",
+      '<div class="st-line ' + s.cls + '"><i>' + esc(s.mark) + '</i><span>' + esc(s.txt) +
+      '</span><em>' + esc(s.meta) + '</em></div>');
+    box.scrollTop = box.scrollHeight;
+    streamTimer = setTimeout(tick, s.cls === "is-head" ? 260 : 78 + Math.random() * 70);
+  };
+  tick();
+}
+
+/* ---------- match narratives ----------
+   Written from the same factors that produced the score, so the prose and
+   the number can never disagree. */
+
+function narrative(m, idx){
+  const a = m.animal;
+  const pos = m.factors.filter(f => f.delta > 0).slice(0, 2);
+  const neg = m.factors.filter(f => f.delta < 0)[0];
+  const aiPos = (m.ai || []).filter(f => f.delta > 0)[0];
+  const aiNeg = (m.ai || []).filter(f => f.delta < 0)[0];
+
+  const lead = idx === 0 ? "Your strongest match."
+    : m.band === "strong" ? "A strong fit."
+    : m.band === "workable" ? "Workable."
+    : "A stretch, but possible.";
+
+  // Two sentences, not one chain: the profile reasons and the reasons drawn
+  // from the person's own words are different claims and read better apart.
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const fit = pos.map(p => lower1(p.label));
+  const sentences = [];
+  if(fit.length) sentences.push(cap(fit.join(", and ")) + ".");
+  else sentences.push("Clears every hard constraint you set.");
+  if(aiPos) sentences.push(cap(lower1(aiPos.label)) + ".");
+
+  const caveat = aiNeg ? aiNeg.label : neg ? neg.label : null;
+  return { lead, body:sentences.join(" "), short:sentences[0], caveat };
+}
+
+function draftMessage(m, me){
+  const a = m.animal;
+  const n = narrative(m, 0);
+  const lines = [];
+  lines.push("Hi — I'd like to be considered as a foster for " + a.name + " (" + a.id + ").");
+  lines.push("");
+  lines.push("A bit about my home: I'm in " + me.area + ", about " + me.miles + " miles from you. " +
+    (me.awayHrs <= 2 ? "I'm home nearly all day."
+     : "They'd be on their own about " + me.awayHrs + " hours on a normal day.") +
+    (me.yard ? " I have a fenced yard." : "") +
+    (me.residentCats || me.residentDogs
+      ? " I already have " + [me.residentCats ? "a cat" : null, me.residentDogs ? "a dog" : null].filter(Boolean).join(" and ") + " at home."
+      : " No other animals at home.") +
+    (me.kidsAtHome ? " There are kids in the house." : ""));
+  lines.push("");
+  lines.push("Why I think it fits: " + lower1(n.short).replace(/\.$/, "") + ". " +
+    "I can commit to " + (me.maxWeeks >= 24 ? "however long it takes" : "up to " + me.maxWeeks + " weeks") +
+    (me.medicalOK ? ", and I'm able to give medication and get to rechecks." : "."));
+  if(n.caveat) lines.push("", "One thing to flag: " + lower1(n.caveat) + ".");
+  lines.push("");
+  lines.push("Let me know what you need from me next.");
+  lines.push("— " + me.name);
+  return lines.join("\n");
+}
+
+/* ---------- results ---------- */
+
+function petCard(m, idx){
+  const a = m.animal;
+  const cls = m.band === "strong" ? "p-strong" : m.band === "workable" ? "p-work" : "p-stretch";
+  const n = narrative(m, idx);
+
+  return '<button class="pet' + (idx === 0 ? " is-top" : "") + '" data-pet="' + a.id + '" ' +
+      'style="animation-delay:' + Math.min(idx * 70, 420) + 'ms">' +
+    (idx === 0 ? '<span class="pet-crown">★ Best fit for your home</span>' : "") +
+    '<div class="pet-stage">' + dio(a) +
+      '<div class="pet-score-badge ' + cls + '"><b>' + m.score + '</b><span>' + esc(m.band) + '</span></div>' +
+    '</div>' +
+    '<div class="pet-body">' +
+      '<div class="pet-name">' + esc(a.name) + '</div>' +
+      '<div class="pet-meta">' + esc(a.breed) + ' · ' + ageText(a) + ' · ' + a.weeks + ' wk stay</div>' +
+      '<p class="pet-say"><b>' + esc(n.lead) + '</b> ' + esc(n.body) + '</p>' +
+    '</div>' +
+    '<div class="pet-foot"><span>' + a.id + '</span>' +
+      (m.aiAdjust ? '<em>AI notes ' + (m.aiAdjust > 0 ? "+" : "") + m.aiAdjust + '</em>' : '<span>AI matched</span>') +
+    '</div></button>';
+}
+
+function renderResults(){
+  const me = state.me;
+  const wrap = $("results");
+  if(!me){ wrap.hidden = true; return; }
+  wrap.hidden = false;
+
+  const ms = matchAnimals(me);
+  const el = ms.filter(m => m.eligible);
+  const bl = ms.filter(m => !m.eligible);
+  const nSig = (me.signals || []).length;
+
+  let html = "";
+
+  // The AI's read on the whole result set, in its own voice.
+  html += '<div class="ai-panel" style="margin-bottom:26px">' +
+    '<div class="ai-head">' +
+      '<span class="ai-mark"><svg viewBox="0 0 24 24"><path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z" fill="#EAFBF6"/></svg></span>' +
+      '<span style="flex:1;min-width:160px"><span class="ai-title" style="display:block">' +
+        (el.length ? "The AI found " + el.length + " you can take" : "Nothing on the board fits yet") + '</span>' +
+        '<span class="ai-sub">AI matching · ' + waiting().length + ' screened · ' + GATE_DEFS.length + ' hard constraints · ' +
+        nSig + ' preference' + (nSig === 1 ? "" : "s") + ' from your words</span></span>' +
+      '<span class="ai-badge on-dark"><span class="beat"></span>AI matching</span>' +
+    '</div><div class="ai-body">';
+
+  if(el.length){
+    const top = el[0], n = narrative(top, 0);
+    html += '<div class="rec-line"><i>TOP</i><span><b>' + esc(top.animal.name) + '</b> — ' + esc(n.body) + '</span></div>';
+    if(n.caveat) html += '<div class="rec-line"><i>FLAG</i><span>' + esc(n.caveat) + '</span></div>';
+    if(bl.length) html += '<div class="rec-line"><i>OUT</i><span>' + bl.length +
+      ' ruled out on hard constraints — listed below with the reason.</span></div>';
+    html += '<div class="talk-acts" style="margin-top:16px">' +
+      '<button class="btn is-bright" id="draftBtn">Draft my message to the shelter</button>' +
+      '<button class="btn on-dark" id="replayBtn">Show the reasoning again</button></div>';
+  }else{
+    html += '<div class="rec-line"><i>NONE</i><span>Every waiting animal fails at least one of your hard constraints. ' +
+      'That is a real answer, not an error.</span></div>' +
+      '<div class="rec-line"><i>TRY</i><span>The most common blocker below is the one to widen first.</span></div>';
+  }
+  html += '</div></div>';
+
+  html += '<div class="col-head"><span class="lbl">Matched for ' + esc(me.name) + '</span>' +
+    '<span class="lbl">' + el.length + ' you can take · ' + bl.length + ' blocked</span></div>';
+
+  if(el.length) html += '<div class="grid">' + el.map(petCard).join("") + '</div>';
+
+  if(bl.length){
+    html += '<div class="rule" style="margin:38px 0 16px"><span class="lbl">Blocked by a hard constraint</span></div>' +
+      '<div class="rows">' + bl.map(m =>
+        '<div class="row is-blocked"><button class="row-main" data-pet="' + m.animal.id + '">' +
+          '<span class="row-id">' + dioSm(m.animal, 34) +
+            '<span class="row-name">' + esc(m.animal.name) + '</span>' +
+            '<span class="row-where">' + esc(m.animal.breed) + ' · ' + m.animal.weeks + ' wk</span></span>' +
+          '<span class="row-right"><span class="score s-blocked" style="min-width:0">' +
+          '<b style="font-size:10px;letter-spacing:.14em">BLOCKED</b>' +
+          '<span class="band">' + esc(lower1(m.blockers[0].reason)) + '</span></span></span>' +
+        '</button>' +
+        '<div class="gates">' + m.gates.map(g =>
+          '<span class="gate g-' + g.state + '" title="' + esc(g.reason || GATE_DEFS.find(d => d.key === g.key).label) + '">' +
+          g.key + '</span>').join("") + '</div></div>').join("") +
+      '</div>';
+  }
+
+  wrap.innerHTML = html;
+  bindPetOpeners();
+  bindTilt(wrap);
+
+  const db = $("draftBtn");
+  if(db) db.onclick = () => openDraft(el[0], me);
+  const rb = $("replayBtn");
+  if(rb) rb.onclick = () => {
+    $("talkPanel").scrollIntoView({ behavior:"smooth", block:"center" });
+    runStream(me, () => {});
+  };
+}
+
+function openDraft(m, me){
+  const text = draftMessage(m, me);
+  $("sheet").innerHTML =
+    '<button class="sheet-close" id="sheetClose">Close</button>' +
+    '<div class="sheet-hero" style="padding-bottom:18px">' + dio(m.animal, "", "") +
+      '<div class="sheet-id"><div class="sheet-name" id="sheetName">Your message</div>' +
+      '<div class="sheet-meta">Drafted for ' + esc(m.animal.name) + ' · ' + m.animal.id + '</div>' +
+      '<p class="sec-p" style="font-size:14.5px;margin-top:12px">Written from your description and the ' +
+        'reasons this match scored ' + m.score + '. Edit anything before you send it.</p></div>' +
+    '</div>' +
+    '<div class="sheet-body">' +
+      '<div><div class="lbl sheet-h">Draft</div><div class="draft" id="draftText">' + esc(text) + '</div></div>' +
+      '<div class="acts"><button class="btn is-primary" id="copyDraft">Copy message</button>' +
+      '<button class="btn is-ghost" id="sendDraft">Send to the shelter</button></div>' +
+    '</div>';
+  $("modal").classList.add("is-open");
+  $("sheetClose").onclick = closePet;
+  $("sheetClose").focus();
+  bindTilt($("sheet"));
+  $("copyDraft").onclick = () => {
+    const ok = () => toast("Message copied.");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, () => toast("Copy failed — select the text and copy it."));
+    }else{ toast("Select the text above to copy it."); }
+  };
+  $("sendDraft").onclick = () => {
+    closePet();
+    toast("Application sent for " + m.animal.name + ". The shelter will follow up.");
+  };
+}
+
+function bindPetOpeners(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pet]"), el => {
+    el.onclick = e => { e.preventDefault(); openPet(el.dataset.pet); };
+  });
+}
+
+/* ---------- pet profile ---------- */
+
+let lastFocus = null;
+
+function openPet(animalId){
+  const a = animalById(animalId);
+  if(!a) return;
+  const me = state.me;
+  const m = me ? evaluate(a, me) : null;
+  if(m) m.animal = a;
+  const u = urgency(a);
+
+  const spec = [
+    ["Species", speciesWord(a.species)],
+    ["Breed", a.breed],
+    ["Age", ageText(a)],
+    ["Size", a.size],
+    ["Energy", a.energy === "med" ? "moderate" : a.energy],
+    ["Stay needed", a.weeks + " weeks"],
+    ["Max time alone", a.maxAloneHrs + " hrs"],
+    ["Experience", "tier " + a.tier + " of 4"],
+    ["Placement by", a.deadlineDays + " day" + (a.deadlineDays === 1 ? "" : "s")]
+  ];
+  const lives = [["Cats", a.catSafe], ["Dogs", a.dogSafe], ["Kids", a.kidSafe]];
+
+  let html = '<button class="sheet-close" id="sheetClose">Close</button>' +
+    '<div class="sheet-hero">' + dio(a) +
+      '<div class="sheet-id">' +
+        '<div class="sheet-name" id="sheetName">' + esc(a.name) + '</div>' +
+        '<div class="sheet-meta">' + a.id + ' · ' + esc(a.breed) + ' · ' + ageText(a) + ' · ' + a.size + '</div>' +
+        '<div class="sel-needs" style="margin-top:14px">' +
+          '<span class="need' + (u === "urgent" ? " is-hard" : "") + '">Placement in ' + a.deadlineDays +
+            ' day' + (a.deadlineDays === 1 ? "" : "s") + '</span>' +
+          (a.medical ? '<span class="need is-hard">Medical care</span>' : "") +
+          (m && m.eligible ? '<span class="need" style="border-color:rgba(15,122,107,.4);color:var(--teal-2);background:var(--teal-lift)">' +
+            m.score + ' · ' + esc(m.band) + ' match</span>' : "") +
+        '</div>' +
+      '</div>' +
+    '</div><div class="sheet-body">';
+
+  if(m && m.eligible){
+    const n = narrative(m, 0);
+    html += '<div class="ai-panel"><div class="ai-head">' +
+      '<span class="ai-mark"><svg viewBox="0 0 24 24"><path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z" fill="#EAFBF6"/></svg></span>' +
+      '<span style="flex:1"><span class="ai-title" style="display:block">Why the AI matched you with ' + esc(a.name) + '</span>' +
+      '<span class="ai-sub">AI matching · scored ' + m.score + ' of 100</span></span>' +
+      '<span class="ai-badge on-dark"><span class="beat"></span>AI matching</span></div>' +
+      '<div class="ai-body">' +
+        '<div class="rec-line"><i>FIT</i><span>' + esc(n.body) + '</span></div>' +
+        (n.caveat ? '<div class="rec-line"><i>FLAG</i><span>' + esc(n.caveat) + '</span></div>' : "") +
+      '</div></div>';
+  }
+
+  html += '<div><div class="lbl sheet-h">Their story</div><p class="sheet-note">' + esc(a.note) + '</p></div>';
+
+  html += '<div><div class="lbl sheet-h">The details</div><dl class="spec">' +
+    spec.map(s => '<div><dt>' + esc(s[0]) + '</dt><dd>' + esc(s[1]) + '</dd></div>').join("") + '</dl></div>';
+
+  html += '<div><div class="lbl sheet-h">Gets along with</div><div class="sel-needs">' +
+    lives.map(l => '<span class="need' + (l[1] ? "" : " is-hard") + '">' +
+      (l[1] ? "" : "Not safe with ") + esc(l[1] ? l[0] : l[0].toLowerCase()) + '</span>').join("") +
+    (a.needsYard ? '<span class="need is-hard">Needs a fenced yard</span>' : "") +
+  '</div></div>';
+
+  if(a.medical){
+    html += '<div><div class="lbl sheet-h">Medical</div><p class="sheet-note">' + esc(a.medical) + '</p></div>';
+  }
+
+  if(m){
+    if(m.eligible){
+      html += '<div><div class="lbl sheet-h">How this scored</div><div class="factors">' +
+        m.factors.slice(0, 4).map(fa =>
+          '<div class="factor ' + (fa.delta > 0 ? "f-pos" : "f-neg") + '"><span>' + esc(fa.label) + '</span>' +
+          '<em>' + (fa.delta > 0 ? "+" : "") + fa.delta + '</em></div>').join("") +
+        m.ai.map(fa =>
+          '<div class="factor ' + (fa.delta > 0 ? "f-pos" : "f-neg") + '"><span>' + esc(fa.label) +
+          ' <em style="color:var(--teal-2);font-size:9.5px;letter-spacing:.1em">FROM YOUR WORDS</em></span>' +
+          '<em>' + (fa.delta > 0 ? "+" : "") + fa.delta + '</em></div>').join("") +
+      '</div></div>';
+      html += '<div class="acts">' +
+        '<button class="btn is-primary" data-apply="' + a.id + '">Apply to foster ' + esc(a.name) + '</button>' +
+        '<button class="btn is-ghost" data-draft="' + a.id + '">Draft my message</button></div>';
+    }else{
+      html += '<div><div class="lbl sheet-h" style="color:var(--cherry)">Why you can\'t take ' + esc(a.name) + '</div>' +
+        '<div class="factors">' + m.blockers.map(b =>
+          '<div class="factor f-block"><span>' + esc(b.reason) + '</span><em>' + b.key + '</em></div>').join("") +
+      '</div></div>';
+    }
+  }
+
+  html += '</div>';
+
+  $("sheet").innerHTML = html;
+  lastFocus = document.activeElement;
+  $("modal").classList.add("is-open");
+  $("sheetClose").onclick = closePet;
+  bindTilt($("sheet"));
+
+  const ap = $("sheet").querySelector("[data-apply]");
+  if(ap) ap.onclick = () => {
+    closePet();
+    toast("Application sent for " + animalById(ap.dataset.apply).name + ". The shelter will follow up.");
+  };
+  const dr = $("sheet").querySelector("[data-draft]");
+  if(dr) dr.onclick = () => openDraft(m, me);
+  $("sheetClose").focus();
+}
+
+function closePet(){
+  $("modal").classList.remove("is-open");
+  if(lastFocus && lastFocus.focus) lastFocus.focus();
+}
+
+/* ---------- hero ---------- */
+
+function renderHero(){
+  const w = waiting();
+  const urgent = w.filter(a => urgency(a) === "urgent").length;
+  $("heroTally").innerHTML =
+    '<div class="tally"><b>' + w.length + '</b><span class="lbl">Waiting now</span></div>' +
+    '<div class="tally"><b class="is-urgent">' + urgent + '</b><span class="lbl">Need out this week</span></div>' +
+    '<div class="tally"><b>' + FOSTERS.length + '</b><span class="lbl">Fosters on call</span></div>';
+
+  // Four faces, most urgent first — the hero argues with the actual queue.
+  const pick = w.slice().sort((a,b) => a.deadlineDays - b.deadlineDays).slice(0, 4);
+  const slots = ["cl-a","cl-b","cl-c","cl-d"];
+  $("clusterIn").innerHTML = pick.map((a, i) =>
+    dio(a, slots[i], '<span class="cl-tag"><b>' + esc(a.name) + '</b><span>' + a.deadlineDays + 'd</span></span>')
+  ).join("");
+  bindTilt($("clusterIn"));
+}
+
+/* Whole-cluster parallax, one plane above the individual tilts. */
+function bindCluster(){
+  if(window.matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+  const box = $("cluster"), inner = $("clusterIn");
+  if(!box || !inner) return;
+  box.addEventListener("pointermove", e => {
+    const r = box.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - .5;
+    const y = (e.clientY - r.top) / r.height - .5;
+    inner.style.transform = "rotateY(" + (x * 9).toFixed(2) + "deg) rotateX(" + (-y * 7).toFixed(2) + "deg)";
+  });
+  box.addEventListener("pointerleave", () => { inner.style.transform = ""; });
+}
+
+/* ---------- views ---------- */
+
+function setView(v){
+  state.view = v;
+  $("tabFoster").setAttribute("aria-selected", String(v === "foster"));
+  $("tabShelter").setAttribute("aria-selected", String(v === "shelter"));
+  $("viewFoster").hidden = v !== "foster";
+  $("viewShelter").hidden = v !== "shelter";
+  $("filters").hidden = v !== "shelter";
+  $("stats").style.display = v === "shelter" ? "" : "none";
+  save();
+  if(v === "foster") renderResults();
+}
+
+const DEMO_NOTES = "I'm Jordan and I'm in Eastside, about 2 miles from you. I work from home so " +
+  "there's always someone here. I'd really love a senior — I'm not up for puppy energy at this " +
+  "stage of my life. I have a cat already who tolerates just about anything. No stairs in my " +
+  "apartment and no yard. I'm a nurse so I can absolutely give meds and get to rechecks. " +
+  "Nothing too big, and I'd rather not take on a bonded pair for my first placement. " +
+  "I could keep one for 12 weeks.";
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+
+Array.prototype.forEach.call(document.querySelectorAll(".chip"), c => {
+  c.onclick = () => setFilter(c.dataset.f);
+});
+$("drawerClose").onclick = () => toggleDrawer(false);
+$("scrim").onclick = () => toggleDrawer(false);
+$("modalBg").onclick = closePet;
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){
+    if($("modal").classList.contains("is-open")) closePet();
+    else { toggleDrawer(false); hideToast(); }
+  }
+});
+
+$("tabFoster").onclick = () => setView("foster");
+$("tabShelter").onclick = () => setView("shelter");
+
+$("goTalk").onclick = () => {
+  $("talkPanel").scrollIntoView({ behavior:"smooth", block:"center" });
+  setTimeout(() => $("talkArea").focus(), 420);
+};
+$("goBoard").onclick = () => { setView("shelter"); window.scrollTo({ top:0, behavior:"smooth" }); };
+
+// Read the description: extract constraints, fill the form, ask what's missing.
+function readHome(scroll){
+  const text = $("talkArea").value;
+  if(!text.trim()){
+    renderAI([], []);
+    $("asks").innerHTML = "";
+    $("talkCount").textContent = "";
+    toast("Write a line or two about your home first.");
+    return [];
+  }
+  const hits = extractForm(text);
+  const sigs = readNotes(text);
+  applyExtraction(hits, true);
+  renderAI(sigs, hits);
+  renderAsks(hits);
+  $("talkCount").textContent = hits.length + " constraints · " + sigs.length + " preferences";
+  if(scroll) $("aiChips").scrollIntoView({ behavior:"smooth", block:"nearest" });
+  return hits;
+}
+
+$("readHome").onclick = () => readHome(true);
+
+$("clearTalk").onclick = () => {
+  $("talkArea").value = "";
+  $("aiChips").innerHTML = "";
+  $("asks").innerHTML = "";
+  $("stream").hidden = true;
+  $("aiNone").hidden = true;
+  $("talkCount").textContent = "";
+  $("talkArea").focus();
+};
+
+$("fillDemo").onclick = () => {
+  $("talkArea").value = DEMO_NOTES;
+  readHome(true);
+  toast("Example loaded and read. Submit to see the matches.");
+};
+
+$("fosterForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const me = readForm();
+  if(!me.species.length){ toast("Pick at least one species you'd foster."); return; }
+  if(!me.sizes.length){ toast("Pick at least one size that works in your space."); return; }
+
+  state.me = me;
+  renderAI(me.signals, extractForm(me.notes));
+  save();
+
+  const btn = e.target.querySelector('[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = "AI is matching…";
+  $("talkPanel").scrollIntoView({ behavior:"smooth", block:"center" });
+
+  runStream(me, () => {
+    btn.disabled = false;
+    btn.textContent = "Find my matches with AI";
+    renderResults();
+    const n = matchAnimals(me).filter(m => m.eligible).length;
+    toast(n ? "Matched " + n + " animal" + (n === 1 ? "" : "s") + " to your home."
+            : "No animals fit your constraints right now.");
+    setTimeout(() => $("results").scrollIntoView({ behavior:"smooth", block:"start" }), 260);
+  });
+});
+
+load();
+if(!animalById(state.selected)) state.selected = ANIMALS[0].id;
+setFilter(state.filter);
+if(state.me){
+  // Rehydrate the saved profile through the parser so signal shape stays current.
+  state.me.signals = readNotes(state.me.notes || "");
+  if(state.me.notes){ $("talkArea").value = state.me.notes; renderAI(state.me.signals, extractForm(state.me.notes)); }
+}
+renderHero();
+bindCluster();
+setView(state.view || "foster");
+</script>
+</body>
+</html>
