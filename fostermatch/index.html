@@ -73,43 +73,58 @@ body::before{
     radial-gradient(760px 560px at 6% 4%,rgba(15,122,107,.09),transparent 60%),
     radial-gradient(1100px 700px at 50% 108%,rgba(206,58,43,.05),transparent 60%);
 }
-/* ---- ambient walker ----
-   A cat strolls along the foot of the page, behind the content. It is
-   background, not decoration to be read: low contrast, no pointer events,
-   and it stops entirely for reduced-motion. */
-/* Its own band at the foot of the hero: behind the hero content but over the
-   page wash, so the cat is actually visible instead of hidden by cards. */
+/* ---- hero video ----
+   A real cat walking, behind the hero. Legibility comes first: the scrim is
+   heaviest over the column that holds the headline and lightens toward the
+   right so the footage still reads. */
+.hero-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--sun-2)}
+.hero-video video{
+  width:100%;height:100%;object-fit:cover;object-position:50% 46%;display:block;
+  /* the footage is green grass; warm and soften it toward the page palette */
+  filter:saturate(.72) contrast(.94) sepia(.14);
+}
+/* ---- the drawn walker ----
+   Rides in front of the footage, on the cream band the scrim fades into, so
+   the two cats never sit on top of one another. */
 .walk-lane{
-  position:absolute;left:0;right:0;bottom:0;height:120px;
-  z-index:0;pointer-events:none;overflow:hidden;
+  position:absolute;left:0;right:0;bottom:0;height:132px;
+  z-index:1;pointer-events:none;overflow:hidden;
 }
 .walk-lane::after{                      /* the ground it walks on */
-  content:"";position:absolute;left:0;right:0;bottom:26px;height:1px;
+  content:"";position:absolute;left:0;right:0;bottom:24px;height:1px;
   background:linear-gradient(90deg,transparent,var(--hair-2) 18%,var(--hair-2) 82%,transparent);
 }
 .walker{
-  position:absolute;bottom:20px;left:0;width:120px;
-  opacity:.55;
-  animation:stroll 38s linear infinite;
+  position:absolute;bottom:16px;left:0;width:138px;
+  animation:stroll 34s linear infinite;
+  filter:drop-shadow(0 4px 6px rgba(60,38,20,.18));
 }
 .walker svg{display:block;width:100%;height:auto}
 @keyframes stroll{
-  from{ transform:translateX(-160px) }
-  to  { transform:translateX(calc(100vw + 40px)) }
+  from{ transform:translateX(-180px) }
+  to  { transform:translateX(calc(100vw + 60px)) }
 }
-.w-leg{
-  transform-box:fill-box;transform-origin:50% 8%;
-  animation:step .58s ease-in-out infinite;
-}
-.w-leg-b,.w-leg-c{animation-delay:-.29s}
+/* diagonal gait: each leg is hinged at the hip */
+.w-leg{transform-box:fill-box;transform-origin:50% 6%;animation:step .56s ease-in-out infinite}
+.w-leg-b,.w-leg-c{animation-delay:-.28s}
 @keyframes step{
-  0%,100%{ transform:rotate(15deg) }
-  50%    { transform:rotate(-15deg) }
+  0%,100%{ transform:rotate(17deg) }
+  50%    { transform:rotate(-17deg) }
 }
-.w-cat{transform-box:fill-box;transform-origin:50% 100%;animation:bob .58s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.6px)}}
-.w-tail{transform-box:fill-box;transform-origin:100% 100%;animation:sway 2.3s ease-in-out infinite}
-@keyframes sway{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(9deg)}}
+.w-cat{transform-box:fill-box;transform-origin:50% 100%;animation:bob .56s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.w-tail{transform-box:fill-box;transform-origin:100% 100%;animation:sway 2.4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(10deg)}}
+
+.hero-scrim{
+  position:absolute;inset:0;display:block;
+  background:
+    linear-gradient(96deg,
+      rgba(253,245,236,.95) 0%, rgba(253,245,236,.92) 30%,
+      rgba(253,245,236,.78) 48%, rgba(253,245,236,.48) 72%, rgba(253,245,236,.30) 100%),
+    linear-gradient(to bottom, rgba(253,245,236,.88) 0%, rgba(253,245,236,0) 20%,
+      rgba(253,245,236,0) 58%, var(--sun) 96%);
+}
 
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 :focus-visible{outline:2.5px solid var(--teal);outline-offset:2px;border-radius:3px}
@@ -287,7 +302,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
 /* ============ hero ============ */
 .hero{position:relative;padding:0 26px;overflow:hidden}
 .hero-in{max-width:1180px;margin:0 auto;padding:58px 0 46px;position:relative;z-index:1}
-.hero{padding-bottom:120px}            /* clearance for the walking lane */
+.hero{padding-bottom:132px}   /* clearance for the walking lane */
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
 /* ---- AI disclosure ----
    The matching is done by software, and a person should be able to tell that
@@ -872,7 +887,8 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
   html{scroll-behavior:auto}
   .cluster .dio{animation:none}
-  /* a looping walk cycle is exactly what this setting is asking us to stop */
+  /* looping footage and a walk cycle are exactly what this setting stops */
+  .hero-video{display:none}
   .walk-lane{display:none}
 }
 </style>
@@ -917,28 +933,60 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
 
   <!-- ========== hero ========== -->
   <div class="hero">
-<div class="walk-lane" aria-hidden="true">
+<!-- Real footage, CC0. Decorative, so it is muted, loops, and never
+       takes the pointer; prefers-reduced-motion removes it entirely. -->
+  <div class="hero-video" aria-hidden="true">
+    <video autoplay muted loop playsinline preload="auto" disablepictureinpicture>
+      <source src="https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e0/Black_Cat_walking.webm/Black_Cat_walking.webm.480p.vp9.webm" type="video/webm">
+    </video>
+    <span class="hero-scrim"></span>
+  </div>
+
+  <div class="walk-lane" aria-hidden="true">
     <div class="walker">
-      <svg viewBox="0 0 132 88">
-        <g fill="#4A72B8">
-          <path class="w-tail" d="M30 50 q-17 -5 -14 -26" fill="none" stroke="#4A72B8" stroke-width="7" stroke-linecap="round"/>
-          <g class="w-leg w-leg-a"><rect x="40" y="60" width="8" height="24" rx="4"/></g>
-          <g class="w-leg w-leg-b"><rect x="53" y="60" width="8" height="24" rx="4"/></g>
-          <g class="w-cat">
-            <ellipse cx="60" cy="50" rx="30" ry="16"/>
-            <circle cx="97" cy="38" r="16"/>
-            <path d="M85 27 l-4 -15 l15 8 z"/>
-            <path d="M106 25 l6 -14 l7 13 z"/>
-            <ellipse cx="110" cy="43" rx="7" ry="5.4"/>
-          </g>
-          <g class="w-leg w-leg-c"><rect x="72" y="60" width="8" height="24" rx="4"/></g>
-          <g class="w-leg w-leg-d"><rect x="83" y="60" width="8" height="24" rx="4"/></g>
+      <svg viewBox="0 0 160 104">
+        <!-- tail sweeps up behind the body -->
+        <path class="w-tail" d="M38 60 C18 57 12 34 23 19" fill="none"
+              stroke="#3A5E9E" stroke-width="8" stroke-linecap="round"/>
+        <!-- far pair, darker, so the near pair reads in front -->
+        <g class="w-leg w-leg-a" fill="#3A5E9E">
+          <rect x="44" y="68" width="9" height="21" rx="4.5"/><ellipse cx="48.5" cy="89" rx="6" ry="3.6"/>
         </g>
-        <circle cx="102" cy="36" r="2.4" fill="#1B3B6F"/>
+        <g class="w-leg w-leg-c" fill="#3A5E9E">
+          <rect x="99" y="68" width="9" height="21" rx="4.5"/><ellipse cx="103.5" cy="89" rx="6" ry="3.6"/>
+        </g>
+
+        <g class="w-cat">
+          <g fill="#4A72B8">
+            <ellipse cx="50" cy="57" rx="21" ry="18"/>   <!-- haunch -->
+            <ellipse cx="80" cy="57" rx="42" ry="16"/>   <!-- torso  -->
+            <ellipse cx="108" cy="56" rx="16" ry="15"/>  <!-- shoulder -->
+            <ellipse cx="119" cy="49" rx="12" ry="12"/>  <!-- neck -->
+            <path d="M116 31 L112 12 L130 23 Z"/>        <!-- far ear -->
+            <path d="M136 27 L146 13 L148 32 Z"/>        <!-- near ear -->
+            <circle cx="129" cy="40" r="15"/>            <!-- head -->
+          </g>
+          <!-- lighter muzzle so the face separates from the head mass -->
+          <ellipse cx="139" cy="47" rx="8.5" ry="6.5" fill="#6B8FCB"/>
+          <path d="M119 26 L117 16 L127 22 Z" fill="#C98B96" opacity=".55"/>
+          <path d="M138 27 L144 18 L145 30 Z" fill="#C98B96" opacity=".55"/>
+          <ellipse cx="132" cy="38" rx="3.4" ry="4" fill="#1B3B6F"/>
+          <circle cx="133.3" cy="36.4" r="1.2" fill="#fff" opacity=".9"/>
+          <path d="M142.4 43.6 l5.2 0 l-2.6 3.6 z" fill="#C98B96"/>
+          <path d="M146 49 l9 -2 M146 51.5 l9 1 M145 54 l7 3"
+                stroke="#1B3B6F" stroke-width="1.1" stroke-linecap="round" opacity=".45" fill="none"/>
+        </g>
+
+        <g class="w-leg w-leg-b" fill="#4A72B8">
+          <rect x="58" y="68" width="10" height="22" rx="5"/><ellipse cx="63" cy="90" rx="6.5" ry="3.8"/>
+        </g>
+        <g class="w-leg w-leg-d" fill="#4A72B8">
+          <rect x="112" y="68" width="10" height="22" rx="5"/><ellipse cx="117" cy="90" rx="6.5" ry="3.8"/>
+        </g>
       </svg>
     </div>
   </div>
-    <div class="hero-in">
+<div class="hero-in">
       <div class="hero-grid">
         <div>
           <div class="eyebrow">
@@ -1151,7 +1199,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
     Photographs are stock images of real animals used as placeholders. They are
     <b>not</b> the animals described on this page, and none of the medical or
     behavioural notes here relate to the animals pictured.
-    Sources: dog.ceo, TheCatAPI, and Wikimedia Commons.
+    Sources: dog.ceo, TheCatAPI, and Wikimedia Commons. Hero footage by Dzkouslavia (CC0).
   </p>
 </div>
 
@@ -3199,6 +3247,17 @@ function renderHero(){
   bindTilt($("clusterIn"));
 }
 
+/* The hero footage is decorative and costs ~2 MB. Don't spend that on a small
+   screen or a connection the user has told the browser to go easy on. */
+function guardHeroVideo(){
+  const box = document.querySelector(".hero-video");
+  if(!box) return;
+  const conn = navigator.connection || {};
+  const heavy = window.innerWidth < 760 || conn.saveData === true ||
+                /2g/.test(conn.effectiveType || "");
+  if(heavy) box.remove();
+}
+
 /* Whole-cluster parallax, one plane above the individual tilts. */
 function bindCluster(){
   if(window.matchMedia("(prefers-reduced-motion:reduce)").matches) return;
@@ -3343,6 +3402,7 @@ if(state.me){
   if(state.me.notes){ $("talkArea").value = state.me.notes; renderAI(state.me.signals, extractForm(state.me.notes)); }
 }
 renderHero();
+guardHeroVideo();
 bindCluster();
 renderMessages();
 renderMsgDot();
