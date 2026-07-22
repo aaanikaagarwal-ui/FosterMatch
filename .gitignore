@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+package-lock.json
+
+# os / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# logs
+*.log
+npm-debug.log*
