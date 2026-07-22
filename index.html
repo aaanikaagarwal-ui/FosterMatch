@@ -938,7 +938,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
        and never takes the pointer; prefers-reduced-motion removes it. -->
   <div class="hero-video" aria-hidden="true">
     <video autoplay muted loop playsinline preload="auto" disablepictureinpicture>
-      <source src="https://upload.wikimedia.org/wikipedia/commons/transcoded/5/54/Goldendoodle_and_Black_Lab_puppies_playing_in_slow_motion.webm/Goldendoodle_and_Black_Lab_puppies_playing_in_slow_motion.webm.240p.vp9.webm" type="video/webm">
+      <source src="assets/dogs-running.webm" type="video/webm">
     </video>
     <span class="hero-scrim"></span>
   </div>
@@ -1394,29 +1394,26 @@ const LOOKS = {
 
    Real animals, but NOT the animals described here — these are stock
    images standing in for invented records, which is why the footer says
-   so outright. Every URL was checked by eye for species and breed before
-   being used; the drawn portrait below stays as the fallback so a blocked
-   or offline image degrades to something rather than an empty frame.
+   so outright. Every file was checked by eye for species and breed.
 
-   Sources: dog.ceo · TheCatAPI · Wikimedia Commons.
+   Served from assets/ rather than hotlinked: Wikimedia rate-limits third
+   party embedding with 429s, which made photos vanish at random. The drawn
+   portrait still sits underneath as the fallback.
+
+   Sources: dog.ceo · Wikimedia Commons.
    ------------------------------------------------------------ */
 
 const PHOTOS = {
-  "K-108":"https://images.dog.ceo/breeds/beagle/n02088364_12154.jpg",          // Dot — beagle
-  "K-114":"https://images.dog.ceo/breeds/pitbull/siena-123.jpg",               // Rooster — pit mix
-  "K-133":"https://images.dog.ceo/breeds/german-shepherd/n02106662_4059.jpg",  // Bishop — shepherd
-  "K-142":"https://images.dog.ceo/breeds/dane-great/n02109047_8090.jpg",       // Callahan — great dane
-  "K-119":"https://images.dog.ceo/breeds/terrier-norfolk/n02094114_3378.jpg",  // Tuck — small terrier
-  // Marigold — ginger, sitting head-on, which survives a portrait crop
-  "K-121":"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/%DA%AF%D8%B1%D8%A8%D9%87_-%D8%AA%D9%87%D8%B1%D8%A7%D9%86-cat_in_iran_10.jpg/960px-%DA%AF%D8%B1%D8%A8%D9%87_-%D8%AA%D9%87%D8%B1%D8%A7%D9%86-cat_in_iran_10.jpg",
-  // Pepita — alone on a stump, which suits a cat that wants no housemates
-  "K-127":"https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Une_des_chattes_tigr%C3%A9es.JPG/960px-Une_des_chattes_tigr%C3%A9es.JPG",
-  // Ash & Ember — two kittens side by side, since the pair cannot be split.
-  // Deliberately not the staged "kittens sharing a milkshake" shot: dairy
-  // upsets most cats and it is the wrong thing to model on a welfare site.
-  "K-136":"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/20131203_kittens_B.jpg/960px-20131203_kittens_B.jpg",
-  "K-140":"https://upload.wikimedia.org/wikipedia/commons/a/a7/Mini_lop.jpg",  // Juniper — lop rabbit
-  "K-145":"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Rex_rabbit_%28black%29.jpg/960px-Rex_rabbit_%28black%29.jpg"
+  "K-108":"assets/dot.jpg",        // beagle
+  "K-114":"assets/rooster.jpg",    // pit mix
+  "K-133":"assets/bishop.jpg",     // shepherd
+  "K-142":"assets/callahan.jpg",   // great dane
+  "K-119":"assets/tuck.jpg",       // small terrier
+  "K-121":"assets/marigold.jpg",   // ginger, sitting head-on
+  "K-127":"assets/pepita.jpg",     // alone on a stump, suits a solitary cat
+  "K-136":"assets/ashember.jpg",   // two kittens, since the pair cannot be split
+  "K-140":"assets/juniper.jpg",    // lop rabbit
+  "K-145":"assets/wendell.jpg"     // rex rabbit
 };
 
 function photoImg(a, eager){
