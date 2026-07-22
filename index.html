@@ -434,7 +434,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
 
 /* conversational intake */
 .talk{max-width:1180px;margin:0 auto}
-.talk-wrap{padding:0 26px 8px}
+.notes-panel{grid-column:1/-1}
 .talk-area{
   width:100%;background:rgba(6,20,17,.5);border:1px solid rgba(207,230,222,.2);
   border-radius:14px;color:#EAF6F2;padding:16px 17px;font-family:inherit;
@@ -865,7 +865,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
   .msg-wrap{grid-template-columns:1fr}
   .msg-pane{height:min(560px,calc(100vh - 150px))}
   .bubble{max-width:86%}
-  .intake,.results,.talk-wrap{padding-left:18px;padding-right:18px}
+  .intake,.results{padding-left:18px;padding-right:18px}
   .hero{padding:0 18px}
   .hero-in{padding:36px 0 30px}
   .board{grid-template-columns:1fr}
@@ -1011,51 +1011,13 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
     </div>
   </div>
 
-  <!-- ========== conversational intake ========== -->
-  <div class="talk-wrap">
-    <div class="talk">
-      <div class="ai-panel" id="talkPanel">
-        <div class="ai-head">
-          <span class="ai-mark">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z"
-                    fill="#EAFBF6" opacity=".95"/>
-            </svg>
-          </span>
-          <span style="flex:1;min-width:160px">
-            <span class="ai-title" style="display:block">Describe your home to the AI</span>
-            <span class="ai-sub">AI matching · plain language · no forms required</span>
-          </span>
-          <span class="ai-sub" id="talkCount"></span>
-        </div>
-        <div class="ai-body">
-          <label>
-            <span class="lbl" style="display:block;margin-bottom:9px">Write it however you'd say it</span>
-            <textarea class="talk-area" id="talkArea" rows="5"
-              placeholder="I'm in a second-floor walk-up on the east side, about ten minutes from you. I work from home so someone's here all day. I'd really love a senior — I'm not up for puppy energy. I've got a cat already who tolerates about anything. I can do meds, I'm a nurse. Nothing too big, and I'd rather not take a bonded pair for my first one."></textarea>
-          </label>
-          <div class="talk-acts">
-            <button class="btn is-bright" id="readHome">Read my home</button>
-            <button class="btn on-dark" id="fillDemo">Use an example</button>
-            <button class="btn on-dark" id="clearTalk">Clear</button>
-          </div>
-          <p class="talk-hint" id="talkHint">The AI pulls your constraints straight out of this and fills the form below.
-            You can correct anything it gets wrong.</p>
-
-          <div class="ai-chips" id="aiChips"></div>
-          <p class="ai-none" id="aiNone" hidden></p>
-          <div class="asks" id="asks"></div>
-          <div class="stream" id="stream" hidden></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ========== structured form ========== -->
   <div class="intake" id="intakeWrap">
-    <div class="rule"><span class="lbl">What the AI pulled out of your description</span></div>
-    <p class="sec-p" style="margin:-14px 0 22px">Everything here was filled in by the AI from your own words. Change anything it
-      got wrong — the hard ones decide who you <em>can</em> take, the rest decide who you'd suit best.</p>
+    <div class="sec-head" style="margin-bottom:24px">
+      <h2 class="sec-h">Tell us about your home</h2>
+      <p class="sec-p">The hard answers decide who you <em>can</em> take; the rest decide who you'd suit
+        best. Anything the boxes can't capture goes in the notes at the end — the AI reads those too.</p>
+    </div>
 
     <form class="form" id="fosterForm">
       <div class="fieldset" data-fs="you">
@@ -1142,6 +1104,43 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
         <div class="field"><span>Medical care</span>
           <div class="checks">
             <label class="check"><input type="checkbox" name="medicalOK"><span>I can give meds &amp; do rechecks</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes-panel">
+        <div class="ai-panel" id="talkPanel">
+          <div class="ai-head">
+            <span class="ai-mark">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2.6 14.1 8 19.4 9.4 15.6 13.2 16.6 18.6 12 16 7.4 18.6 8.4 13.2 4.6 9.4 9.9 8Z"
+                      fill="#EAFBF6" opacity=".95"/>
+              </svg>
+            </span>
+            <span style="flex:1;min-width:160px">
+              <span class="ai-title" style="display:block">Anything else we should know?</span>
+              <span class="ai-sub">AI matching · free text · optional</span>
+            </span>
+            <span class="ai-sub" id="talkCount"></span>
+          </div>
+          <div class="ai-body">
+            <label>
+              <span class="lbl" style="display:block;margin-bottom:9px">Preferences, dealbreakers, your schedule — however you'd say it</span>
+              <textarea class="talk-area" id="talkArea" rows="5"
+                placeholder="I'm in a second-floor walk-up on the east side, about ten minutes from you. I work from home so someone's here all day. I'd really love a senior — I'm not up for puppy energy. I've got a cat already who tolerates about anything. I can do meds, I'm a nurse. Nothing too big, and I'd rather not take a bonded pair for my first one."></textarea>
+            </label>
+            <div class="talk-acts">
+              <button class="btn is-bright" type="button" id="readHome">Read my notes</button>
+              <button class="btn on-dark" type="button" id="fillDemo">Use an example</button>
+              <button class="btn on-dark" type="button" id="clearTalk">Clear</button>
+            </div>
+            <p class="talk-hint" id="talkHint">The AI reads this for preferences the boxes above cannot capture. Mention a
+              constraint here and it updates the boxes for you — correct anything it gets wrong.</p>
+
+            <div class="ai-chips" id="aiChips"></div>
+            <p class="ai-none" id="aiNone" hidden></p>
+            <div class="asks" id="asks"></div>
+            <div class="stream" id="stream" hidden></div>
           </div>
         </div>
       </div>
@@ -3324,8 +3323,7 @@ $("tabMessages").onclick = () => setView("messages");
 $("tabShelter").onclick = () => setView("shelter");
 
 $("goTalk").onclick = () => {
-  $("talkPanel").scrollIntoView({ behavior:"smooth", block:"center" });
-  setTimeout(() => $("talkArea").focus(), 420);
+  $("intakeWrap").scrollIntoView({ behavior:"smooth", block:"start" });
 };
 $("goBoard").onclick = () => { setView("shelter"); window.scrollTo({ top:0, behavior:"smooth" }); };
 
