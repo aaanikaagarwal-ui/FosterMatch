@@ -2,8 +2,8 @@
 
 Matches shelter animals to foster homes, and shows its reasoning.
 
-A single-file demo: [`fostermatch/index.html`](fostermatch/index.html). No build step, no
-dependencies — open it in a browser.
+A single-file demo: [`index.html`](index.html). No build step, no dependencies — open it in
+a browser, or deploy the repo as-is to any static host.
 
 ## What it does
 
