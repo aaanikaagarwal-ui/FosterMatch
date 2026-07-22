@@ -80,8 +80,8 @@ body::before{
 .hero-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--sun-2)}
 .hero-video video{
   width:100%;height:100%;object-fit:cover;object-position:50% 46%;display:block;
-  /* the footage is green grass; warm and soften it toward the page palette */
-  filter:saturate(.72) contrast(.94) sepia(.14);
+  /* light dogs on pale grass wash out fast — keep colour, nudge warm */
+  filter:saturate(1.06) contrast(1.06) sepia(.05);
 }
 /* ---- the drawn walker ----
    Rides in front of the footage, on the cream band the scrim fades into, so
@@ -120,8 +120,8 @@ body::before{
   position:absolute;inset:0;display:block;
   background:
     linear-gradient(96deg,
-      rgba(253,245,236,.95) 0%, rgba(253,245,236,.92) 30%,
-      rgba(253,245,236,.78) 48%, rgba(253,245,236,.48) 72%, rgba(253,245,236,.30) 100%),
+      rgba(253,245,236,.94) 0%, rgba(253,245,236,.90) 30%,
+      rgba(253,245,236,.70) 48%, rgba(253,245,236,.34) 72%, rgba(253,245,236,.18) 100%),
     linear-gradient(to bottom, rgba(253,245,236,.88) 0%, rgba(253,245,236,0) 20%,
       rgba(253,245,236,0) 58%, var(--sun) 96%);
 }
@@ -933,11 +933,12 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
 
   <!-- ========== hero ========== -->
   <div class="hero">
-<!-- Real footage, CC0. Decorative, so it is muted, loops, and never
-       takes the pointer; prefers-reduced-motion removes it entirely. -->
+<!-- Real footage: two dogs running, CC BY-SA 3.0 by Tim Sweet, credited in
+       the footer as that licence requires. Decorative, so it is muted, loops
+       and never takes the pointer; prefers-reduced-motion removes it. -->
   <div class="hero-video" aria-hidden="true">
     <video autoplay muted loop playsinline preload="auto" disablepictureinpicture>
-      <source src="https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e0/Black_Cat_walking.webm/Black_Cat_walking.webm.480p.vp9.webm" type="video/webm">
+      <source src="https://upload.wikimedia.org/wikipedia/commons/transcoded/5/54/Goldendoodle_and_Black_Lab_puppies_playing_in_slow_motion.webm/Goldendoodle_and_Black_Lab_puppies_playing_in_slow_motion.webm.240p.vp9.webm" type="video/webm">
     </video>
     <span class="hero-scrim"></span>
   </div>
@@ -1198,7 +1199,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--ink);letter-spac
     Photographs are stock images of real animals used as placeholders. They are
     <b>not</b> the animals described on this page, and none of the medical or
     behavioural notes here relate to the animals pictured.
-    Sources: dog.ceo, TheCatAPI, and Wikimedia Commons. Hero footage by Dzkouslavia (CC0).
+    Sources: dog.ceo, TheCatAPI, and Wikimedia Commons. Hero footage &ldquo;Goldendoodle and Black Lab puppies playing&rdquo; by Tim Sweet, <a href="https://creativecommons.org/licenses/by-sa/3.0" style="color:inherit">CC BY-SA 3.0</a>.
   </p>
 </div>
 
@@ -3254,7 +3255,19 @@ function guardHeroVideo(){
   const conn = navigator.connection || {};
   const heavy = window.innerWidth < 760 || conn.saveData === true ||
                 /2g/.test(conn.effectiveType || "");
-  if(heavy) box.remove();
+  if(heavy){ box.remove(); return; }
+
+  // The source runs 64s and drifts into distant, near-still shots. Loop only
+  // the stretch where the dogs are close and running.
+  const v = box.querySelector("video");
+  if(!v) return;
+  const IN = 2, OUT = 26;
+  const rewind = () => { try{ v.currentTime = IN; }catch(e){} };
+  v.addEventListener("loadedmetadata", rewind);
+  v.addEventListener("timeupdate", () => {
+    if(v.currentTime > OUT || v.currentTime < IN - 0.5) rewind();
+  });
+  if(v.readyState >= 1) rewind();
 }
 
 /* Whole-cluster parallax, one plane above the individual tilts. */
